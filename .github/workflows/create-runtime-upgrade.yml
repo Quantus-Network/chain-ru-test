@@ -254,7 +254,7 @@ jobs:
           # Create the release. This command does not support the --json flag.
           gh release create "$NEW_VERSION" \
             --repo "$GITHUB_REPOSITORY" \
-            --title "Release $NEW_VERSION" \
+            --title "$NEW_VERSION" \
             --notes "$release_notes" \
             --target "$GITHUB_SHA" \
             $( [[ "$DRAFT_RELEASE" == "true" ]] && echo "--draft" ) \
@@ -269,7 +269,7 @@ jobs:
           echo "upload_url=$(echo "$release_data" | jq -r .uploadUrl)" >> $GITHUB_OUTPUT
           echo "html_url=$(echo "$release_data" | jq -r .url)" >> $GITHUB_OUTPUT
           echo "new_version=${{ env.NEW_VERSION }}" >> $GITHUB_OUTPUT
-          
+
   publish-runtime:
     runs-on: ubuntu-22.04
     needs: create-draft-release
@@ -320,4 +320,4 @@ jobs:
           gh release upload ${{ needs.create-draft-release.outputs.new_version }} \
             "srtool-output.json#resonance-runtime-srtool-output-v${{ steps.get-runtime-info.outputs.runtime_ver }}.json" \
             --clobber \
-            --repo "$GITHUB_REPOSITORY" 
+            --repo "$GITHUB_REPOSITORY"
