@@ -195,6 +195,9 @@ jobs:
           echo "wasm=$WASM_PATH" >> $GITHUB_OUTPUT
           echo "wasm_compressed=$WASM_COMPRESSED_PATH" >> $GITHUB_OUTPUT
 
+      - name: Fix permissions for cache
+        run: sudo chown -R runner:docker "$GITHUB_WORKSPACE/runtime/target"
+
       - name: persist srtool digest
         run: >
           echo '${{ steps.srtool-build.outputs.json }}' |
@@ -236,15 +239,24 @@ jobs:
 
       - name: create draft release
         id: create-release
-        uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ needs.calculate_next_version.outputs.new_version }}
-          release_name: ${{ needs.calculate_next_version.outputs.new_version }}
-          draft: ${{ github.event.inputs.draft_release }}
-          prerelease: ${{ github.event.inputs.is_prerelease }}
-
+          NEW_VERSION: ${{ needs.calculate_next_version.outputs.new_version }}
+          IS_PRERELEASE: ${{ github.event.inputs.is_prerelease }}
+          DRAFT_RELEASE: ${{ github.event.inputs.draft_release }}
+        run: |
+          release_data=$(gh release create "$NEW_VERSION" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "Release $NEW_VERSION" \
+            --notes "Initial draft for runtime upgrade." \
+            --target "$GITHUB_SHA" \
+            $( [[ "$DRAFT_RELEASE" == "true" ]] && echo "--draft" ) \
+            $( [[ "$IS_PRERELEASE" == "true" ]] && echo "--prerelease" ) \
+            --json uploadUrl,htmlUrl)
+          
+          echo "upload_url=$(echo "$release_data" | jq -r .uploadUrl)" >> $GITHUB_OUTPUT
+          echo "html_url=$(echo "$release_data" | jq -r .htmlUrl)" >> $GITHUB_OUTPUT
+          
   publish-runtime:
     runs-on: ubuntu-22.04
     needs: create-draft-release
