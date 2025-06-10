@@ -139,9 +139,9 @@ jobs:
     env:
       CARGO_TERM_COLOR: always
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: cache target dir
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: "$GITHUB_WORKSPACE/runtime/target"
           key: srtool-target-${{ github.sha }}
@@ -208,7 +208,7 @@ jobs:
     runs-on: ubuntu-22.04
     needs: create-draft-release
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           name: runtime
