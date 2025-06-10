@@ -149,34 +149,51 @@ jobs:
             srtool-target-
       - name: build runtime
         id: srtool-build
+        shell: bash
         run: |
-          docker run --rm \
+          set -e
+          
+          CMD="docker run --rm \
             -e RUSTC_BOOTSTRAP=1 \
-            -v .:/build \
+            -e PACKAGE=resonance-runtime \
+            -e RUNTIME_DIR=runtime \
+            -e BUILD_OPTS='--features on-chain-release-build' \
+            -e PROFILE=release \
+            -v $(pwd):/build \
             -v /tmp/cargo:/cargo-home \
             paritytech/srtool:1.84.1 \
-            bash -c "cd /build && cargo build --release --package resonance-runtime --features on-chain-release-build"
-          
-          # Manually set the outputs that the original action provided
-          # This assumes the standard output paths for srtool builds
-          WASM_PATH="runtime/target/release/wbuild/resonance-runtime/resonance_runtime.wasm"
-          WASM_COMPRESSED_PATH="${WASM_PATH}.gz"
+            build --json"
 
-          # Check if the primary wasm file exists
-          if [ ! -f "$WASM_PATH" ]; then
-            echo "::error::WASM file not found at $WASM_PATH"
+          echo "::group::Executing srtool command"
+          echo "$CMD"
+          echo "::endgroup::"
+          
+          # Execute the command, capture the last line of output which is the JSON
+          JSON_OUTPUT=$($CMD | tee /dev/stderr | tail -n 1)
+
+          # Check if JSON is valid
+          if ! echo "$JSON_OUTPUT" | jq .; then
+            echo "::error::Failed to parse srtool JSON output."
             exit 1
           fi
 
-          # Compress the wasm file
-          gzip -c "$WASM_PATH" > "$WASM_COMPRESSED_PATH"
+          echo "::group::Srtool JSON Output"
+          echo "$JSON_OUTPUT" | jq .
+          echo "::endgroup::"
 
-          echo "wasm=${WASM_PATH}" >> $GITHUB_OUTPUT
-          echo "wasm_compressed=${WASM_COMPRESSED_PATH}" >> $GITHUB_OUTPUT
+          # Extract paths from JSON
+          WASM_PATH=$(echo "$JSON_OUTPUT" | jq -r '.runtimes.compact.wasm')
+          WASM_COMPRESSED_PATH=$(echo "$JSON_OUTPUT" | jq -r '.runtimes.compressed.wasm')
           
-          # Create a dummy JSON output, as the original action did.
-          # The content of this JSON might not be as important as the build itself.
-          echo '{"ok": true, "success": true}' > srtool-output.json
+          if [ -z "$WASM_PATH" ] || [ "$WASM_PATH" == "null" ]; then
+            echo "::error::Could not extract wasm path from srtool output."
+            exit 1
+          fi
+
+          # Set outputs for subsequent steps
+          echo "json=$JSON_OUTPUT" >> $GITHUB_OUTPUT
+          echo "wasm=$WASM_PATH" >> $GITHUB_OUTPUT
+          echo "wasm_compressed=$WASM_COMPRESSED_PATH" >> $GITHUB_OUTPUT
 
       - name: persist srtool digest
         run: >
