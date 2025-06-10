@@ -158,7 +158,7 @@ jobs:
           image: paritytech/srtool
           tag: 1.84.1
           chain: chain-ru
-          profile: "production"
+          profile: "release"
       - name: persist srtool digest
         run: >
           echo '${{ steps.srtool-build.outputs.json }}' |
