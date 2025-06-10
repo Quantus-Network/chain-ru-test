@@ -135,7 +135,7 @@ jobs:
   build-runtime:
     timeout-minutes: 180
     needs: calculate_next_version
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     env:
       CARGO_TERM_COLOR: always
     steps:
@@ -177,7 +177,7 @@ jobs:
             ${{ steps.srtool-build.outputs.wasm_compressed }}
 
   create-draft-release:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: [calculate_next_version, build-runtime]
     outputs:
       release_url: ${{ steps.create-release.outputs.html_url }}
@@ -205,7 +205,7 @@ jobs:
           prerelease: ${{ github.event.inputs.is_prerelease }}
 
   publish-runtime:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: create-draft-release
     steps:
       - uses: actions/checkout@v2
