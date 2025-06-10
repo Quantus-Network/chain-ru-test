@@ -256,6 +256,8 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: srtool-json
+      - name: List files for debugging
+        run: ls -R
       - name: ruby setup
         uses: ruby/setup-ruby@v1
         with:
