@@ -248,6 +248,8 @@ jobs:
   publish-runtime:
     runs-on: ubuntu-22.04
     needs: create-draft-release
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
@@ -270,8 +272,6 @@ jobs:
           echo "runtime_ver=$runtime_ver" >> $GITHUB_OUTPUT
           echo "compact_wasm_path=$compact_wasm_filename" >> $GITHUB_OUTPUT
           echo "compressed_wasm_path=$compressed_wasm_filename" >> $GITHUB_OUTPUT
-      - name: List files for debugging
-        run: ls -R
       - name: upload compact wasm
         uses: actions/upload-release-asset@v1
         env:
