@@ -245,15 +245,21 @@ jobs:
           IS_PRERELEASE: ${{ github.event.inputs.is_prerelease }}
           DRAFT_RELEASE: ${{ github.event.inputs.draft_release }}
         run: |
-          release_data=$(gh release create "$NEW_VERSION" \
+          # Create the release. This command does not support the --json flag.
+          gh release create "$NEW_VERSION" \
             --repo "$GITHUB_REPOSITORY" \
             --title "Release $NEW_VERSION" \
             --notes "Initial draft for runtime upgrade." \
             --target "$GITHUB_SHA" \
             $( [[ "$DRAFT_RELEASE" == "true" ]] && echo "--draft" ) \
-            $( [[ "$IS_PRERELEASE" == "true" ]] && echo "--prerelease" ) \
+            $( [[ "$IS_PRERELEASE" == "true" ]] && echo "--prerelease" )
+
+          # Now, fetch the data for the newly created release. The 'view' command supports --json.
+          release_data=$(gh release view "$NEW_VERSION" \
+            --repo "$GITHUB_REPOSITORY" \
             --json uploadUrl,htmlUrl)
           
+          # Set the outputs for the next job using the fetched data
           echo "upload_url=$(echo "$release_data" | jq -r .uploadUrl)" >> $GITHUB_OUTPUT
           echo "html_url=$(echo "$release_data" | jq -r .htmlUrl)" >> $GITHUB_OUTPUT
           
