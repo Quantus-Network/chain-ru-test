@@ -256,18 +256,11 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: srtool-json
-      - name: ruby setup
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: '2.7'
       - name: get runtime version
         id: get-runtime-version
         run: |
-          runtime_ver="$(ruby -e '
-            require "./scripts/lib.rb";
-            puts get_runtime("chain-ru")
-          ')"
-          echo "::set-output name=runtime_ver::$runtime_ver"
+          runtime_ver=$(jq -r '.runtimes.compact.subwasm.core_version.specVersion' srtool-output.json)
+          echo "runtime_ver=$runtime_ver" >> $GITHUB_OUTPUT
       - name: upload compact wasm
         uses: actions/upload-release-asset@v1
         env:
