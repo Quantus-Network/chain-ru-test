@@ -154,6 +154,7 @@ jobs:
           BUILD_OPTS: "--features on-chain-release-build"
           RUNTIME_DIR: "runtime"
           PACKAGE: "resonance-runtime"
+          RUSTC_BOOTSTRAP: 1
         with:
           image: paritytech/srtool
           tag: 1.84.1
