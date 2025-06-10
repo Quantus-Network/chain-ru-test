@@ -245,12 +245,17 @@ jobs:
           NEW_VERSION: ${{ needs.calculate_next_version.outputs.new_version }}
           IS_PRERELEASE: ${{ github.event.inputs.is_prerelease }}
           DRAFT_RELEASE: ${{ github.event.inputs.draft_release }}
+          BRANCH_NAME: ${{ needs.calculate_next_version.outputs.branch_name }}
+          COMMIT_SHA_SHORT: ${{ needs.calculate_next_version.outputs.commit_sha_short }}
         run: |
+          # Prepare release notes
+          release_notes=$(printf "Automated runtime upgrade release for version %s.\\nBuilt from branch: \`%s\`\\nCommit: \`%s\`" "$NEW_VERSION" "$BRANCH_NAME" "$COMMIT_SHA_SHORT")
+
           # Create the release. This command does not support the --json flag.
           gh release create "$NEW_VERSION" \
             --repo "$GITHUB_REPOSITORY" \
-            --title "$NEW_VERSION" \
-            --notes "Initial draft for runtime upgrade." \
+            --title "Release $NEW_VERSION" \
+            --notes "$release_notes" \
             --target "$GITHUB_SHA" \
             $( [[ "$DRAFT_RELEASE" == "true" ]] && echo "--draft" ) \
             $( [[ "$IS_PRERELEASE" == "true" ]] && echo "--prerelease" )
@@ -297,7 +302,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release upload ${{ needs.create-draft-release.outputs.new_version }} \
-            "${{ steps.get-runtime-info.outputs.compact_wasm_path }}" \
+            "${{ steps.get-runtime-info.outputs.compact_wasm_path }}#resonance-runtime-v${{ steps.get-runtime-info.outputs.runtime_ver }}.compact.wasm" \
             --clobber \
             --repo "$GITHUB_REPOSITORY"
       - name: upload compressed wasm
@@ -305,7 +310,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release upload ${{ needs.create-draft-release.outputs.new_version }} \
-            "${{ steps.get-runtime-info.outputs.compressed_wasm_path }}" \
+            "${{ steps.get-runtime-info.outputs.compressed_wasm_path }}#resonance-runtime-v${{ steps.get-runtime-info.outputs.runtime_ver }}.compact.compressed.wasm" \
             --clobber \
             --repo "$GITHUB_REPOSITORY"
       - name: upload srtool output json
@@ -313,6 +318,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release upload ${{ needs.create-draft-release.outputs.new_version }} \
-            srtool-output.json \
+            "srtool-output.json#resonance-runtime-srtool-output-v${{ steps.get-runtime-info.outputs.runtime_ver }}.json" \
             --clobber \
             --repo "$GITHUB_REPOSITORY" 
