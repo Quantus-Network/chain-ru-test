@@ -151,29 +151,27 @@ jobs:
         id: srtool-build
         shell: bash
         run: |
-          set -e
+          set -eo pipefail
           
-          CMD="docker run --rm \
-            -e RUSTC_BOOTSTRAP=1 \
-            -e PACKAGE=resonance-runtime \
-            -e RUNTIME_DIR=runtime \
-            -e BUILD_OPTS='--features on-chain-release-build' \
-            -e PROFILE=release \
-            -v $(pwd):/build \
-            -v /tmp/cargo:/cargo-home \
-            paritytech/srtool:1.84.1 \
-            build --json"
-
           echo "::group::Executing srtool command"
-          echo "$CMD"
+          
+          JSON_OUTPUT=$(docker run --rm \
+            -e RUSTC_BOOTSTRAP=1 \
+            -e PACKAGE="resonance-runtime" \
+            -e RUNTIME_DIR="runtime" \
+            -e "BUILD_OPTS=--features on-chain-release-build" \
+            -e PROFILE="release" \
+            -v "$(pwd):/build" \
+            -v "/tmp/cargo:/cargo-home" \
+            paritytech/srtool:1.84.1 \
+            build --json \
+            | tee /dev/stderr | tail -n 1)
+
           echo "::endgroup::"
           
-          # Execute the command, capture the last line of output which is the JSON
-          JSON_OUTPUT=$($CMD | tee /dev/stderr | tail -n 1)
-
           # Check if JSON is valid
           if ! echo "$JSON_OUTPUT" | jq .; then
-            echo "::error::Failed to parse srtool JSON output."
+            echo "::error::Failed to parse srtool JSON output. Last line was: $JSON_OUTPUT"
             exit 1
           fi
 
