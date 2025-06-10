@@ -256,18 +256,15 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: srtool-json
-      - name: List files for debugging
-        run: ls -R
       - name: ruby setup
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: '2.7'
-          bundler-cache: true
       - name: get runtime version
         id: get-runtime-version
         run: |
           runtime_ver="$(ruby -e '
-            require "./scripts/github/lib.rb";
+            require "./scripts/lib.rb";
             puts get_runtime("chain-ru")
           ')"
           echo "::set-output name=runtime_ver::$runtime_ver"
