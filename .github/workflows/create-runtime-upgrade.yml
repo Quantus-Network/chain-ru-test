@@ -256,19 +256,23 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: srtool-json
-      - name: get runtime version
-        id: get-runtime-version
+      - name: get runtime version and paths
+        id: get-runtime-info
         run: |
           runtime_ver=$(jq -r '.runtimes.compact.subwasm.core_version.specVersion' srtool-output.json)
+          compact_wasm_path=$(jq -r '.runtimes.compact.wasm' srtool-output.json)
+          compressed_wasm_path=$(jq -r '.runtimes.compressed.wasm' srtool-output.json)
           echo "runtime_ver=$runtime_ver" >> $GITHUB_OUTPUT
+          echo "compact_wasm_path=$compact_wasm_path" >> $GITHUB_OUTPUT
+          echo "compressed_wasm_path=$compressed_wasm_path" >> $GITHUB_OUTPUT
       - name: upload compact wasm
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.create-draft-release.outputs.asset_upload_url }}
-          asset_path: chain_ru_runtime.compact.wasm
-          asset_name: chain-ru-runtime-v${{ steps.get-runtime-version.outputs.runtime_ver }}.compact.wasm
+          asset_path: ${{ steps.get-runtime-info.outputs.compact_wasm_path }}
+          asset_name: resonance-runtime-v${{ steps.get-runtime-info.outputs.runtime_ver }}.compact.wasm
           asset_content_type: application/wasm
       - name: upload compressed wasm
         uses: actions/upload-release-asset@v1
@@ -276,18 +280,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.create-draft-release.outputs.asset_upload_url }}
-          asset_path: chain_ru_runtime.compact.compressed.wasm
-          asset_name: chain-ru-runtime-v${{ steps.get-runtime-version.outputs.runtime_ver }}.compact.compressed.wasm
+          asset_path: ${{ steps.get-runtime-info.outputs.compressed_wasm_path }}
+          asset_name: resonance-runtime-v${{ steps.get-runtime-info.outputs.runtime_ver }}.compact.compressed.wasm
           asset_content_type: application/wasm
-      - name: upload types json
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.create-draft-release.outputs.asset_upload_url }}
-          asset_path: types.json
-          asset_name: chain-ru-types-v${{ steps.get-runtime-version.outputs.runtime_ver }}.json
-          asset_content_type: application/json
       - name: upload srtool output json
         uses: actions/upload-release-asset@v1
         env:
@@ -295,5 +290,5 @@ jobs:
         with:
           upload_url: ${{ needs.create-draft-release.outputs.asset_upload_url }}
           asset_path: srtool-output.json
-          asset_name: chain-ru-srtool-output-v${{ steps.get-runtime-version.outputs.runtime_ver }}.json
+          asset_name: resonance-runtime-srtool-output-v${{ steps.get-runtime-info.outputs.runtime_ver }}.json
           asset_content_type: application/json 
