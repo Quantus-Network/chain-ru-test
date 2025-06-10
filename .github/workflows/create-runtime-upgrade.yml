@@ -164,7 +164,7 @@ jobs:
             -v "$(pwd):/build" \
             -v "/tmp/cargo:/cargo-home" \
             paritytech/srtool:1.84.1 \
-            build --json \
+            build --app --json -cM \
             | tee /dev/stderr | tail -n 1)
 
           echo "::endgroup::"
