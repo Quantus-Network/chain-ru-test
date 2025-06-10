@@ -225,6 +225,7 @@ jobs:
     outputs:
       release_url: ${{ steps.create-release.outputs.html_url }}
       asset_upload_url: ${{ steps.create-release.outputs.upload_url }}
+      new_version: ${{ steps.create-release.outputs.new_version }}
     steps:
       - uses: actions/checkout@v4
       - name: Create Git Tag
@@ -262,6 +263,7 @@ jobs:
           # Set the outputs for the next job using the fetched data
           echo "upload_url=$(echo "$release_data" | jq -r .uploadUrl)" >> $GITHUB_OUTPUT
           echo "html_url=$(echo "$release_data" | jq -r .url)" >> $GITHUB_OUTPUT
+          echo "new_version=${{ env.NEW_VERSION }}" >> $GITHUB_OUTPUT
           
   publish-runtime:
     runs-on: ubuntu-22.04
@@ -294,7 +296,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload ${{ needs.calculate_next_version.outputs.new_version }} \
+          gh release upload ${{ needs.create-draft-release.outputs.new_version }} \
             "${{ steps.get-runtime-info.outputs.compact_wasm_path }}" \
             --clobber \
             --repo "$GITHUB_REPOSITORY"
@@ -302,7 +304,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload ${{ needs.calculate_next_version.outputs.new_version }} \
+          gh release upload ${{ needs.create-draft-release.outputs.new_version }} \
             "${{ steps.get-runtime-info.outputs.compressed_wasm_path }}" \
             --clobber \
             --repo "$GITHUB_REPOSITORY"
@@ -310,7 +312,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release upload ${{ needs.calculate_next_version.outputs.new_version }} \
+          gh release upload ${{ needs.create-draft-release.outputs.new_version }} \
             srtool-output.json \
             --clobber \
             --repo "$GITHUB_REPOSITORY" 
