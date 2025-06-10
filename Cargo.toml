@@ -127,9 +127,3 @@ primitive-types = { version = "0.13.1", default-features = false }
 rand = { version = "0.8.5", default-features = false }
 
 substrate-test-utils = { version = "3.0.0", default-features = false }
-
-# Patch to force all plonky2 dependencies to use the Quantus-Network fork
-[patch."https://github.com/Resonance-Network/plonky2"]
-plonky2 = { git = "https://github.com/Quantus-Network/plonky2" }
-plonky2_field = { git = "https://github.com/Quantus-Network/plonky2" }
-plonky2_util = { git = "https://github.com/Quantus-Network/plonky2" }
