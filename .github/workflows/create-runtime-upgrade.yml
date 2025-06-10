@@ -257,11 +257,11 @@ jobs:
           # Now, fetch the data for the newly created release. The 'view' command supports --json.
           release_data=$(gh release view "$NEW_VERSION" \
             --repo "$GITHUB_REPOSITORY" \
-            --json uploadUrl,htmlUrl)
+            --json uploadUrl,url)
           
           # Set the outputs for the next job using the fetched data
           echo "upload_url=$(echo "$release_data" | jq -r .uploadUrl)" >> $GITHUB_OUTPUT
-          echo "html_url=$(echo "$release_data" | jq -r .htmlUrl)" >> $GITHUB_OUTPUT
+          echo "html_url=$(echo "$release_data" | jq -r .url)" >> $GITHUB_OUTPUT
           
   publish-runtime:
     runs-on: ubuntu-22.04
