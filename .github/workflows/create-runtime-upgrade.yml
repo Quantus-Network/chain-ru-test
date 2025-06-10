@@ -260,11 +260,18 @@ jobs:
         id: get-runtime-info
         run: |
           runtime_ver=$(jq -r '.runtimes.compact.subwasm.core_version.specVersion' srtool-output.json)
-          compact_wasm_path=$(jq -r '.runtimes.compact.wasm' srtool-output.json)
-          compressed_wasm_path=$(jq -r '.runtimes.compressed.wasm' srtool-output.json)
+          compact_wasm_path_full=$(jq -r '.runtimes.compact.wasm' srtool-output.json)
+          compressed_wasm_path_full=$(jq -r '.runtimes.compressed.wasm' srtool-output.json)
+          
+          # Extract just the filename, as download-artifact flattens the structure
+          compact_wasm_filename=$(basename "$compact_wasm_path_full")
+          compressed_wasm_filename=$(basename "$compressed_wasm_path_full")
+
           echo "runtime_ver=$runtime_ver" >> $GITHUB_OUTPUT
-          echo "compact_wasm_path=$compact_wasm_path" >> $GITHUB_OUTPUT
-          echo "compressed_wasm_path=$compressed_wasm_path" >> $GITHUB_OUTPUT
+          echo "compact_wasm_path=$compact_wasm_filename" >> $GITHUB_OUTPUT
+          echo "compressed_wasm_path=$compressed_wasm_filename" >> $GITHUB_OUTPUT
+      - name: List files for debugging
+        run: ls -R
       - name: upload compact wasm
         uses: actions/upload-release-asset@v1
         env:
