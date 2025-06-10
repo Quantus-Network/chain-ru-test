@@ -217,6 +217,8 @@ jobs:
   create-draft-release:
     runs-on: ubuntu-22.04
     needs: [calculate_next_version, build-runtime]
+    permissions:
+      contents: write
     outputs:
       release_url: ${{ steps.create-release.outputs.html_url }}
       asset_upload_url: ${{ steps.create-release.outputs.upload_url }}
