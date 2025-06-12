@@ -31,6 +31,7 @@ resolver = "2"
 # Miscellaneous
 async-trait = { version = "0.1.85", default-features = false }
 binary-merkle-tree = { version = "16.0.0", default-features = false }
+base64ct = "=1.7.3"
 clap = { version = "4.5.13" }
 codec = { version = "3.6.12", default-features = false, package = "parity-scale-codec" }
 docify = { version = "0.2.9", default-features = false }
