@@ -38,6 +38,10 @@ on:
         required: false
         type: boolean
         default: false
+      rust_version:
+        description: 'Rust version to use for building (e.g., 1.84.0)'
+        required: false
+        default: '1.85.0'
 
 jobs:
   calculate_next_version:
@@ -166,6 +170,7 @@ jobs:
           
           JSON_OUTPUT=$(docker run --rm \
             -e RUSTC_BOOTSTRAP=1 \
+            -e RUSTC_VERSION="${{ github.event.inputs.rust_version }}" \
             -e PACKAGE="resonance-runtime" \
             -e RUNTIME_DIR="runtime" \
             -e "BUILD_OPTS=--features on-chain-release-build" \
