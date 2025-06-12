@@ -259,9 +259,10 @@ jobs:
           DRAFT_RELEASE: ${{ github.event.inputs.draft_release }}
           BRANCH_NAME: ${{ needs.calculate_next_version.outputs.branch_name }}
           COMMIT_SHA_SHORT: ${{ needs.calculate_next_version.outputs.commit_sha_short }}
+          RUNTIME_SPEC: ${{ steps.get-runtime-info.outputs.runtime_ver }}
         run: |
           # Prepare release notes
-          release_notes=$(printf "Automated runtime upgrade release for version %s.\\nBuilt from branch: \`%s\`\\nCommit: \`%s\`" "$NEW_VERSION" "$BRANCH_NAME" "$COMMIT_SHA_SHORT")
+          release_notes=$(printf "Runtime upgrade release for version %s\\n Runtime spec version: %s \\nBuilt from branch: \`%s\`\\nCommit: \`%s\`" "$NEW_VERSION" "$RUNTIME_SPEC" "$BRANCH_NAME" "$COMMIT_SHA_SHORT")
 
           # Create the release. This command does not support the --json flag.
           gh release create "$NEW_VERSION" \
