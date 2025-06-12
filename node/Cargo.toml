@@ -27,6 +27,7 @@ frame-metadata-hash-extension.workspace = true
 frame-system.default-features = true
 frame-system.workspace = true
 futures = { features = ["thread-pool"], workspace = true }
+getrandom.workspace = true
 hex = { workspace = true, default-features = false }
 jsonrpsee = { features = ["server"], workspace = true }
 log.workspace = true
@@ -104,11 +105,7 @@ substrate-build-script-utils.default-features = true
 
 [features]
 default = ["std"]
-std = [
-	"dilithium-crypto/std",
-	"rand/std",
-	"resonance-runtime/std",
-]
+std = ["dilithium-crypto/std", "rand/std", "resonance-runtime/std"]
 # Dependencies that are only required if runtime benchmarking should be build.
 runtime-benchmarks = [
 	"frame-benchmarking-cli/runtime-benchmarks",

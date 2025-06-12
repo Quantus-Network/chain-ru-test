@@ -7,6 +7,7 @@ use crate::{
 };
 use dilithium_crypto::{traits::WormholeAddress, ResonancePair};
 use frame_benchmarking_cli::{BenchmarkCmd, ExtrinsicFactory, SUBSTRATE_REFERENCE_HARDWARE};
+use getrandom;
 use resonance_runtime::{Block, EXISTENTIAL_DEPOSIT};
 use rusty_crystals_hdwallet::wormhole::WormholePair;
 use rusty_crystals_hdwallet::{generate_mnemonic, HDLattice};
@@ -95,10 +96,13 @@ pub fn generate_quantus_key(
             })
         }
         QuantusAddressType::Wormhole => {
-            let wormhole_pair = WormholePair::generate_new().map_err(|e| {
-                eprintln!("Error generating WormholePair: {:?}", e);
-                sc_cli::Error::Input(format!("Wormhole generation error: {:?}", e).into())
+            let mut secret = [0u8; 32];
+            getrandom::getrandom(&mut secret).map_err(|e| {
+                eprintln!("Error generating random bytes: {:?}", e);
+                sc_cli::Error::Input("Failed to generate random bytes".into())
             })?;
+
+            let wormhole_pair = WormholePair::generate_pair_from_secret(&secret);
 
             // Convert wormhole address to account ID using WormholeAddress type
             let wormhole_address = WormholeAddress(wormhole_pair.address);
