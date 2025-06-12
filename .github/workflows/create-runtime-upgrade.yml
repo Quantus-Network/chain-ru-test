@@ -62,8 +62,14 @@ jobs:
       - name: Get latest tag
         id: latest_tag
         run: |
-          # Attempt to get the latest vX.Y.Z-ru tag
-          latest_semver_tag=$(git describe --tags --match "v[0-9]*.[0-9]*.[0-9]*-ru" --abbrev=0 2>/dev/null || echo "v0.0.0-ru")
+          # Get all tags matching the pattern and sort them by version
+          latest_semver_tag=$(git tag -l "v[0-9]*.[0-9]*.[0-9]*-ru" | sort -V | tail -n 1)
+          
+          # If no tags found, use default
+          if [ -z "$latest_semver_tag" ]; then
+            latest_semver_tag="v0.0.0-ru"
+          fi
+          
           echo "latest_tag_found=$latest_semver_tag" >> $GITHUB_OUTPUT
           echo "Latest semantic version tag found: $latest_semver_tag"
 
