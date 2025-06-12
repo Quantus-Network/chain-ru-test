@@ -31,7 +31,6 @@ resolver = "2"
 # Miscellaneous
 async-trait = { version = "0.1.85", default-features = false }
 binary-merkle-tree = { version = "16.0.0", default-features = false }
-base64ct = "=1.7.3"
 clap = { version = "4.5.13" }
 codec = { version = "3.6.12", default-features = false, package = "parity-scale-codec" }
 docify = { version = "0.2.9", default-features = false }
@@ -82,11 +81,6 @@ sp-faucet = { path = "./primitives/faucet", default-features = false }
 # Quantus network dependencies
 rusty-crystals-dilithium = { git = "https://github.com/Quantus-Network/rusty-crystals.git" , branch="feat/monorepo", package = "rusty-crystals-dilithium", default-features = false, features = ["no_std"]}
 rusty-crystals-hdwallet = { git = "https://github.com/Quantus-Network/rusty-crystals.git" , branch="feat/monorepo", package = "rusty-crystals-hdwallet", default-features = false, features = ["std"]}
-#rusty-crystals-dilithium = { git = "https://github.com/Quantus-Network/rusty-crystals.git", branch = "feat/separate_features", default-features = false, features = [
-#    "no_std",
-#] }
-#rusty-crystals-hdwallet = { git = "https://github.com/Quantus-Network/rusty-crystals.git", branch = "feat/separate_features", package = "rusty-crystals-hdwallet" }
-#rusty-crystals = { git = "https://github.com/Quantus-Network/rusty-crystals.git", branch = "feat/separate_features", default-features = false, features = ["dilithium", "hdwallet", "no_std"] }
 plonky2 = { git = "https://github.com/Quantus-Network/plonky2", default-features = false, features = [
     "no_random",
 ] }
