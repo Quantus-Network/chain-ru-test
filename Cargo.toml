@@ -80,7 +80,7 @@ sp-faucet = { path = "./primitives/faucet", default-features = false }
 
 # Quantus network dependencies
 rusty-crystals-dilithium = { git = "https://github.com/Quantus-Network/rusty-crystals.git" , branch="feat/monorepo", package = "rusty-crystals-dilithium", default-features = false, features = ["no_std"]}
-rusty-crystals-hdwallet = { git = "https://github.com/Quantus-Network/rusty-crystals.git" , branch="feat/monorepo", package = "rusty-crystals-hdwallet", default-features = false, features = ["std"]}
+rusty-crystals-hdwallet = { git = "https://github.com/Quantus-Network/rusty-crystals.git" , branch="feat/monorepo", package = "rusty-crystals-hdwallet", default-features = false}
 plonky2 = { git = "https://github.com/Quantus-Network/plonky2", default-features = false, features = [
     "no_random",
 ] }
