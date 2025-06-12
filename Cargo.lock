@@ -9153,7 +9153,7 @@ checksum = "8a0d197bd2c9dc6e53b84da9556a69ba4cdfab8619eb41a8bd1cc2027a0f6b1d"
 [[package]]
 name = "rusty-crystals-dilithium"
 version = "1.0.0"
-source = "git+https://github.com/Quantus-Network/rusty-crystals.git#9715789ac763bcac18552bdab584537a24663113"
+source = "git+https://github.com/Quantus-Network/rusty-crystals.git?branch=feat%2Fseparate_features#d467878807510907a3e9eef5a79eaf33a7e60c92"
 dependencies = [
  "rand 0.7.3",
  "sha2 0.10.9",
@@ -9162,7 +9162,7 @@ dependencies = [
 [[package]]
 name = "rusty-crystals-hdwallet"
 version = "0.1.1"
-source = "git+https://github.com/Quantus-Network/rusty-crystals.git#9715789ac763bcac18552bdab584537a24663113"
+source = "git+https://github.com/Quantus-Network/rusty-crystals.git?branch=feat%2Fseparate_features#d467878807510907a3e9eef5a79eaf33a7e60c92"
 dependencies = [
  "bip39",
  "hex-literal",

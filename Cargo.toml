@@ -76,8 +76,8 @@ sp-consensus-qpow = { path = "./primitives/consensus/qpow", default-features = f
 sp-faucet = { path = "./primitives/faucet", default-features = false }
 
 # Quantus network dependencies
-rusty-crystals-dilithium = { git = "https://github.com/Quantus-Network/rusty-crystals.git", default-features = false, features = ["no_std"] }
-rusty-crystals-hdwallet = { git = "https://github.com/Quantus-Network/rusty-crystals.git", package = "rusty-crystals-hdwallet" }
+rusty-crystals-dilithium = { git = "https://github.com/Quantus-Network/rusty-crystals.git", branch = "feat/separate_features", default-features = false, features = ["no_std"] }
+rusty-crystals-hdwallet = { git = "https://github.com/Quantus-Network/rusty-crystals.git", branch = "feat/separate_features" }
 plonky2 = { git = "https://github.com/Quantus-Network/plonky2", default-features = false, features = ["no_random"] }
 poseidon-resonance = { git = "https://github.com/Quantus-Network/poseidon-resonance", default-features = false }
 
