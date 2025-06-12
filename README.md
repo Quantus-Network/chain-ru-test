@@ -5,7 +5,7 @@ This guide will help you install and run a Quantus Network node for mining.
 **🚀 Quick Start Mining**: See our [Mining Guide](MINING.md) for a comprehensive setup tutorial with troubleshooting and optimization tips.
 
 
-# Resonance Network Node
+# Quantus Network Node
 
 ---
 ## Prerequisites
@@ -80,14 +80,14 @@ The faucet allows you to obtain test tokens. You can use it via the following RP
 To check an account's balance, use the `faucet_getAccountInfo` method:
 
 ```bash
-curl -H "Content-Type: application/json" -d '{"jsonrpc":"2.0","id":1,"method":"faucet_getAccountInfo", "params":["<RESONANCE_ACCOUNT_ADDRESS>"]}' http://localhost:9944
+curl -H "Content-Type: application/json" -d '{"jsonrpc":"2.0","id":1,"method":"faucet_getAccountInfo", "params":["<QUANTUS_ACCOUNT_ADDRESS>"]}' http://localhost:9944
 ```
 
 ### Request tokens
 
 To request tokens, use the `faucet_requestTokens` method:
 ```bash
-curl -H "Content-Type: application/json" -d '{"jsonrpc":"2.0","id":1,"method":"faucet_requestTokens", "params":["<RESONANCE_ACCOUNT_ADDRESS>"]}' http://localhost:9944
+curl -H "Content-Type: application/json" -d '{"jsonrpc":"2.0","id":1,"method":"faucet_requestTokens", "params":["<QUANTUS_ACCOUNT_ADDRESS>"]}' http://localhost:9944
 ```
 
 Each mint operation adds 10 tokens to your account. The maximum balance an address can have is 1000 tokens. If your account already has the maximum amount, new tokens will not be added.

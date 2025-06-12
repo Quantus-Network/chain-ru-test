@@ -1,6 +1,6 @@
 [package]
-name = "resonance-runtime"
-description = "Resonance Runtime - Proof of Vibes"
+name = "quantus-runtime"
+description = "Quantus Runtime - Proof of Vibes"
 version = "0.1.0"
 license = "Apache-2.0"
 authors.workspace = true

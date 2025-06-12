@@ -171,7 +171,7 @@ jobs:
           JSON_OUTPUT=$(docker run --rm \
             -e RUSTC_BOOTSTRAP=1 \
             -e RUSTC_VERSION="${{ github.event.inputs.rust_version }}" \
-            -e PACKAGE="resonance-runtime" \
+            -e PACKAGE="quantus-runtime" \
             -e RUNTIME_DIR="runtime" \
             -e "BUILD_OPTS=--features on-chain-release-build" \
             -e PROFILE="release" \
@@ -314,7 +314,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release upload ${{ needs.create-draft-release.outputs.new_version }} \
-            "${{ steps.get-runtime-info.outputs.compact_wasm_path }}#resonance-runtime-v${{ steps.get-runtime-info.outputs.runtime_ver }}.compact.wasm" \
+            "${{ steps.get-runtime-info.outputs.compact_wasm_path }}#quantus-runtime-v${{ steps.get-runtime-info.outputs.runtime_ver }}.compact.wasm" \
             --clobber \
             --repo "$GITHUB_REPOSITORY"
       - name: upload compressed wasm
@@ -322,7 +322,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release upload ${{ needs.create-draft-release.outputs.new_version }} \
-            "${{ steps.get-runtime-info.outputs.compressed_wasm_path }}#resonance-runtime-v${{ steps.get-runtime-info.outputs.runtime_ver }}.compact.compressed.wasm" \
+            "${{ steps.get-runtime-info.outputs.compressed_wasm_path }}#quantus-runtime-v${{ steps.get-runtime-info.outputs.runtime_ver }}.compact.compressed.wasm" \
             --clobber \
             --repo "$GITHUB_REPOSITORY"
       - name: upload srtool output json
@@ -330,6 +330,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release upload ${{ needs.create-draft-release.outputs.new_version }} \
-            "srtool-output.json#resonance-runtime-srtool-output-v${{ steps.get-runtime-info.outputs.runtime_ver }}.json" \
+            "srtool-output.json#quantus-runtime-srtool-output-v${{ steps.get-runtime-info.outputs.runtime_ver }}.json" \
             --clobber \
             --repo "$GITHUB_REPOSITORY"

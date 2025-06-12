@@ -30,11 +30,11 @@
 // benchmark
 // pallet
 // --runtime
-// ./target/release/wbuild/resonance-runtime/resonance_runtime.wasm
+// ./target/release/wbuild/resonance-runtime/quantus_runtime.wasm
 // --pallet
 // pallet-merkle-airdrop
 // --extrinsic
-// 
+//
 // --template
 // ./.maintain/frame-weight-template.hbs
 // --output

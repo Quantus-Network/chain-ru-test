@@ -130,16 +130,16 @@ compile:
     - sha256sum ./resonance-miner | cut -d ' ' -f 1 | tee ./resonance-miner.sha256
     - mv target/release/quantus-node ./quantus-node
     - sha256sum ./quantus-node | cut -d ' ' -f 1 | tee ./quantus-node.sha256
-    - mv target/release/wbuild/resonance-runtime/resonance_runtime.compact.compressed.wasm ./resonance_runtime.compact.compressed.wasm
-    - sha256sum ./resonance_runtime.compact.compressed.wasm | cut -d ' ' -f 1 | tee ./resonance_runtime.compact.compressed.wasm.sha256
+    - mv target/release/wbuild/resonance-runtime/quantus_runtime.compact.compressed.wasm ./quantus_runtime.compact.compressed.wasm
+    - sha256sum ./quantus_runtime.compact.compressed.wasm | cut -d ' ' -f 1 | tee ./quantus_runtime.compact.compressed.wasm.sha256
   artifacts:
     paths:
       - resonance-miner
       - resonance-miner.sha256
       - quantus-node
       - quantus-node.sha256
-      - resonance_runtime.compact.compressed.wasm
-      - resonance_runtime.compact.compressed.wasm.sha256
+      - quantus_runtime.compact.compressed.wasm
+      - quantus_runtime.compact.compressed.wasm.sha256
 
 test:
   stage: test
