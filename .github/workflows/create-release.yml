@@ -50,6 +50,7 @@ on:
 
 jobs:
   calculate-next-version:
+    name: 🧮 Calculate Next Version
     runs-on: ubuntu-latest
     outputs:
       new_version: ${{ steps.versioner.outputs.new_version }}
@@ -158,6 +159,7 @@ jobs:
           echo "new_version=$new_version" >> $GITHUB_OUTPUT
 
   update-cargo-toml:
+    name: 📝 Update version files
     needs: calculate-next-version
     runs-on: ubuntu-latest
     permissions:
@@ -209,6 +211,7 @@ jobs:
           git push
 
   build-and-package:
+    name: 🏗️ Build & Package (Linux, macOS, Windows)
     needs: [calculate-next-version, update-cargo-toml]
     runs-on: ${{ matrix.os }}
     strategy:
@@ -365,6 +368,7 @@ jobs:
             sha256sums-${{ needs.calculate-next-version.outputs.new_version }}-${{ matrix.target }}.txt
 
   build-runtime:
+    name: 🧩 Build Runtime (srtool)
     if: github.event.inputs.is_runtime_upgrade == 'true'
     timeout-minutes: 180
     needs: [calculate-next-version, update-cargo-toml]
@@ -462,6 +466,7 @@ jobs:
             quantus-runtime-srtool-output-v*.json
 
   create-github-release:
+    name: 🚀 Create GitHub Release
     needs: [calculate-next-version, build-and-package, build-runtime]
     if: always() && (needs.build-runtime.result == 'success' || needs.build-runtime.result == 'skipped') && needs.build-and-package.result == 'success'
     runs-on: ubuntu-latest
