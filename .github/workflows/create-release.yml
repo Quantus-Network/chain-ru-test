@@ -170,7 +170,7 @@ jobs:
 
       - name: Update files
         env:
-          NEW_VERSION_WITH_V: ${{ needs.calculate_next_version.outputs.new_version }}
+          NEW_VERSION_WITH_V: ${{ needs.calculate-next-version.outputs.new_version }}
         run: |
           set -ex
           new_cargo_version=${NEW_VERSION_WITH_V#v}
@@ -183,7 +183,7 @@ jobs:
           if [[ "${{ github.event.inputs.is_runtime_upgrade }}" == "true" ]]; then
             echo "Runtime upgrade detected. Updating runtime/Cargo.toml and incrementing spec_version..."
             sed -i -E "s/^version\s*=\s*\"[0-9a-zA-Z.-]+\"/version = \"$new_cargo_version\"/" runtime/Cargo.toml
-            
+          
             # Increment spec_version
             current_spec_version=$(grep -o 'spec_version: [0-9]*' runtime/src/lib.rs | awk '{print $2}')
             new_spec_version=$((current_spec_version + 1))
@@ -311,7 +311,7 @@ jobs:
       - name: Prepare Release Assets
         id: prepare_assets
         env:
-          NEW_VERSION: ${{ needs.calculate_next_version.outputs.new_version }}
+          NEW_VERSION: ${{ needs.calculate-next-version.outputs.new_version }}
           TARGET_ARCH: ${{ matrix.target }}
         shell: bash
         run: |
@@ -322,13 +322,13 @@ jobs:
             ARCHIVE_EXTENSION="zip"
             CHSUM_EXEC="powershell -Command \"(Get-FileHash -Algorithm SHA256 '\${asset_name}').Hash.ToLower() + ' *\${asset_name}' | Set-Content -Encoding ascii '\${checksum_file_name}'\""
             ARCHIVE_EXEC="powershell -Command \"Compress-Archive -Path staging/\${NODE_EXECUTABLE_NAME} -DestinationPath \${asset_name}\""
-            
+          
             asset_name="${NODE_BASE_NAME}-${NEW_VERSION}-${TARGET_ARCH}.${ARCHIVE_EXTENSION}"
             checksum_file_name="sha256sums-${NEW_VERSION}-${TARGET_ARCH}.txt"
 
             mkdir -p staging
             cp "target/${TARGET_ARCH}/release/${NODE_EXECUTABLE_NAME}" "staging/"
-            
+          
             eval "$ARCHIVE_EXEC"
             eval "$CHSUM_EXEC"
 
@@ -339,9 +339,9 @@ jobs:
 
             mkdir staging
             cp target/${TARGET_ARCH}/release/${NODE_BINARY_NAME} staging/
-            
+          
             (cd staging && tar -czvf "../${asset_name}" ${NODE_BINARY_NAME})
-            
+          
             if [[ "${{ runner.os }}" == "macOS" ]]; then
               shasum -a 256 "${asset_name}" > "${checksum_file_name}"
             else
@@ -360,9 +360,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: release-assets-${{ matrix.target }}
-          path: | 
-            quantus-node-${{ needs.calculate_next_version.outputs.new_version }}-${{ matrix.target }}.${{ runner.os == 'Windows' && 'zip' || 'tar.gz' }}
-            sha256sums-${{ needs.calculate_next_version.outputs.new_version }}-${{ matrix.target }}.txt
+          path: |
+            quantus-node-${{ needs.calculate-next-version.outputs.new_version }}-${{ matrix.target }}.${{ runner.os == 'Windows' && 'zip' || 'tar.gz' }}
+            sha256sums-${{ needs.calculate-next-version.outputs.new_version }}-${{ matrix.target }}.txt
 
   build-runtime:
     if: github.event.inputs.is_runtime_upgrade == 'true'
@@ -517,7 +517,7 @@ jobs:
 
       - name: Create Git Tag
         env:
-          NEW_VERSION: ${{ needs.calculate_next_version.outputs.new_version }}
+          NEW_VERSION: ${{ needs.calculate-next-version.outputs.new_version }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config user.name "${{ github.actor }}"
@@ -528,9 +528,9 @@ jobs:
       - name: Create GitHub Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NEW_VERSION: ${{ needs.calculate_next_version.outputs.new_version }}
-          COMMIT_SHA_SHORT: ${{ needs.calculate_next_version.outputs.commit_sha_short }}
-          BRANCH_NAME: ${{ needs.calculate_next_version.outputs.branch_name }}
+          NEW_VERSION: ${{ needs.calculate-next-version.outputs.new_version }}
+          COMMIT_SHA_SHORT: ${{ needs.calculate-next-version.outputs.commit_sha_short }}
+          BRANCH_NAME: ${{ needs.calculate-next-version.outputs.branch_name }}
           IS_PRERELEASE: ${{ github.event.inputs.is_prerelease }}
           DRAFT_RELEASE: ${{ github.event.inputs.draft_release }}
           IS_RUNTIME_UPGRADE: ${{ github.event.inputs.is_runtime_upgrade }}
