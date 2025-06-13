@@ -49,7 +49,7 @@ on:
         default: 'ru'
 
 jobs:
-  calculate_next_version:
+  calculate-next-version:
     runs-on: ubuntu-latest
     outputs:
       new_version: ${{ steps.versioner.outputs.new_version }}
@@ -157,8 +157,8 @@ jobs:
           echo "New version: $new_version"
           echo "new_version=$new_version" >> $GITHUB_OUTPUT
 
-  update_cargo_toml:
-    needs: calculate_next_version
+  update-cargo-toml:
+    needs: calculate-next-version
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -197,8 +197,8 @@ jobs:
           fi
 
           # Commit changes
-          git config user.name "quantus-ci"
-          git config user.email "quantus-ci@users.noreply.github.com"
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor }}@users.noreply.github.com"
           
           git add node/Cargo.toml Cargo.lock
           if [[ "${{ github.event.inputs.is_runtime_upgrade }}" == "true" ]]; then
@@ -208,8 +208,8 @@ jobs:
           git commit -m $"ci: Automate version bump to $NEW_VERSION_WITH_V"
           git push
 
-  build_and_package:
-    needs: [calculate_next_version, update_cargo_toml]
+  build-and-package:
+    needs: [calculate-next-version, update-cargo-toml]
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -367,7 +367,7 @@ jobs:
   build-runtime:
     if: github.event.inputs.is_runtime_upgrade == 'true'
     timeout-minutes: 180
-    needs: [calculate_next_version, update_cargo_toml]
+    needs: [calculate-next-version, update-cargo-toml]
     runs-on: ubuntu-22.04
     env:
       CARGO_TERM_COLOR: always
@@ -461,9 +461,9 @@ jobs:
             quantus-runtime-v*.wasm
             quantus-runtime-srtool-output-v*.json
 
-  create_github_release:
-    needs: [calculate_next_version, build_and_package]
-    if: always() && !contains(needs.*.result, 'failure')
+  create-github-release:
+    needs: [calculate-next-version, build-and-package, build-runtime]
+    if: always() && (needs.build-runtime.result == 'success' || needs.build-runtime.result == 'skipped') && needs.build-and-package.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       contents: write
