@@ -1,4 +1,4 @@
-name: Create Release
+name: Create Full Release
 
 env:
   CARGO_TERM_COLOR: always
@@ -315,7 +315,7 @@ jobs:
         env:
           NEW_VERSION: ${{ needs.calculate_next_version.outputs.new_version }}
           TARGET_ARCH: ${{ matrix.target }}
-        shell: bash 
+        shell: bash
         run: |
           NODE_BASE_NAME="quantus-node"
           
@@ -530,4 +530,4 @@ jobs:
             --target "$GITHUB_SHA" \
             $( [[ "$IS_PRERELEASE" == "true" ]] && echo "--prerelease" ) \
             $( [[ "$DRAFT_RELEASE" == "true" ]] && echo "--draft" ) \
-            "${asset_args[@]}" 
+            "${asset_args[@]}"
