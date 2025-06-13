@@ -545,10 +545,20 @@ jobs:
 
           # Add runtime files if this is a runtime upgrade
           if [[ "$IS_RUNTIME_UPGRADE" == "true" ]]; then
+            # Get the actual paths from the downloaded artifacts
+            compact_wasm_path=$(find . -name "quantus_runtime.compact.wasm" -type f)
+            compressed_wasm_path=$(find . -name "quantus_runtime.compact.compressed.wasm" -type f)
+            srtool_json_path="srtool-output.json"
+
+            if [ -z "$compact_wasm_path" ] || [ -z "$compressed_wasm_path" ]; then
+              echo "Error: Could not find WASM files"
+              exit 1
+            fi
+
             asset_args+=(
-              "${{ steps.get-runtime-info.outputs.compact_wasm_path }}#quantus-runtime-v${{ steps.get-runtime-info.outputs.runtime_ver }}.compact.wasm"
-              "${{ steps.get-runtime-info.outputs.compressed_wasm_path }}#quantus-runtime-v${{ steps.get-runtime-info.outputs.runtime_ver }}.compact.compressed.wasm"
-              "srtool-output.json#quantus-runtime-srtool-output-v${{ steps.get-runtime-info.outputs.runtime_ver }}.json"
+              "$compact_wasm_path#quantus-runtime-v${{ steps.get-runtime-info.outputs.runtime_ver }}.compact.wasm"
+              "$compressed_wasm_path#quantus-runtime-v${{ steps.get-runtime-info.outputs.runtime_ver }}.compact.compressed.wasm"
+              "$srtool_json_path#quantus-runtime-srtool-output-v${{ steps.get-runtime-info.outputs.runtime_ver }}.json"
             )
           fi
 
