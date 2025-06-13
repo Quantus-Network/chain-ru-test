@@ -429,21 +429,23 @@ jobs:
           echo "wasm=$WASM_PATH" >> $GITHUB_OUTPUT
           echo "wasm_compressed=$WASM_COMPRESSED_PATH" >> $GITHUB_OUTPUT
 
+          # Extract runtime version
+          runtime_ver=$(echo "$JSON_OUTPUT" | jq -r '.runtimes.compact.subwasm.core_version.specVersion')
+          echo "runtime_ver=$runtime_ver" >> $GITHUB_OUTPUT
+
+          # Persist srtool digest
+          echo "$JSON_OUTPUT" | jq > srtool-output.json
+
       - name: Fix permissions for cache
         run: sudo chown -R runner:docker "$GITHUB_WORKSPACE/runtime/target"
 
-      - name: persist srtool digest
-        run: >
-          echo '${{ steps.srtool-build.outputs.json }}' |
-          jq > srtool-output.json
-      - if: always()
-        name: upload srtool json
+      - name: upload srtool json
         uses: actions/upload-artifact@v4
         with:
           name: srtool-json
           path: srtool-output.json
-      - if: always()
-        name: upload runtime
+
+      - name: upload runtime
         uses: actions/upload-artifact@v4
         with:
           name: runtime
@@ -458,6 +460,31 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
+      - if: github.event.inputs.is_runtime_upgrade == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: runtime
+      - if: github.event.inputs.is_runtime_upgrade == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: srtool-json
+      - if: github.event.inputs.is_runtime_upgrade == 'true'
+        name: get runtime version and paths
+        id: get-runtime-info
+        run: |
+          runtime_ver=$(jq -r '.runtimes.compact.subwasm.core_version.specVersion' srtool-output.json)
+          compact_wasm_path_full=$(jq -r '.runtimes.compact.wasm' srtool-output.json)
+          compressed_wasm_path_full=$(jq -r '.runtimes.compressed.wasm' srtool-output.json)
+          
+          # Extract just the filename, as download-artifact flattens the structure
+          compact_wasm_filename=$(basename "$compact_wasm_path_full")
+          compressed_wasm_filename=$(basename "$compressed_wasm_path_full")
+
+          echo "runtime_ver=$runtime_ver" >> $GITHUB_OUTPUT
+          echo "compact_wasm_path=$compact_wasm_filename" >> $GITHUB_OUTPUT
+          echo "compressed_wasm_path=$compressed_wasm_filename" >> $GITHUB_OUTPUT
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
@@ -473,7 +500,7 @@ jobs:
           echo "--- Directory structure of downloaded-artifacts ---"
           ls -R downloaded-artifacts
           echo "--- Finding asset files ---"
-          find downloaded-artifacts -type f \( -name "*.tar.gz" -o -name "*.zip" -o -name "*.txt" -o -name "*.wasm" -o -name "*.json" \) -print0 > asset_files.txt
+          find downloaded-artifacts -type f \( -name "*.tar.gz" -o -name "*.zip" -o -name "*.txt" \) -print0 > asset_files.txt
           echo "--- Raw content of asset_files.txt (null characters will not be visible) ---"
           cat asset_files.txt 
           echo "--- Processed content of asset_files.txt (one file per line) ---"
@@ -515,6 +542,15 @@ jobs:
           while IFS= read -r -d $'\0' file; do
             asset_args+=("$file")
           done < asset_files.txt
+
+          # Add runtime files if this is a runtime upgrade
+          if [[ "$IS_RUNTIME_UPGRADE" == "true" ]]; then
+            asset_args+=(
+              "${{ steps.get-runtime-info.outputs.compact_wasm_path }}#quantus-runtime-v${{ steps.get-runtime-info.outputs.runtime_ver }}.compact.wasm"
+              "${{ steps.get-runtime-info.outputs.compressed_wasm_path }}#quantus-runtime-v${{ steps.get-runtime-info.outputs.runtime_ver }}.compact.compressed.wasm"
+              "srtool-output.json#quantus-runtime-srtool-output-v${{ steps.get-runtime-info.outputs.runtime_ver }}.json"
+            )
+          fi
 
           echo "Debug: Release notes file content:"
           cat release_notes.txt
