@@ -8146,7 +8146,7 @@ dependencies = [
 
 [[package]]
 name = "quantus-node"
-version = "0.0.1-green-parrot"
+version = "0.0.1-red-parrot"
 dependencies = [
  "async-trait",
  "clap",
