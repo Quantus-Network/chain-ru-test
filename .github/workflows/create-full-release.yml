@@ -445,16 +445,7 @@ jobs:
           name: srtool-json
           path: srtool-output.json
 
-      - name: upload runtime
-        uses: actions/upload-artifact@v4
-        with:
-          name: runtime
-          path: |
-            ${{ steps.srtool-build.outputs.wasm }}
-            ${{ steps.srtool-build.outputs.wasm_compressed }}
-
       - name: Extract runtime version and rename files
-        if: github.event.inputs.is_runtime_upgrade == 'true'
         run: |
           runtime_ver=$(jq -r '.runtimes.compact.subwasm.core_version.specVersion' srtool-output.json)
           wasm_path=$(jq -r '.runtimes.compact.wasm' srtool-output.json)
@@ -462,9 +453,7 @@ jobs:
           cp "$wasm_path" quantus-runtime-v${runtime_ver}.compact.wasm
           cp "$wasm_compressed_path" quantus-runtime-v${runtime_ver}.compact.compressed.wasm
           cp srtool-output.json quantus-runtime-srtool-output-v${runtime_ver}.json
-
       - name: Upload runtime artifacts
-        if: github.event.inputs.is_runtime_upgrade == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: runtime
