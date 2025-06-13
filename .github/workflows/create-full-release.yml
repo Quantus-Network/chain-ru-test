@@ -457,8 +457,10 @@ jobs:
         if: github.event.inputs.is_runtime_upgrade == 'true'
         run: |
           runtime_ver=$(jq -r '.runtimes.compact.subwasm.core_version.specVersion' srtool-output.json)
-          cp quantus_runtime.compact.wasm quantus-runtime-v${runtime_ver}.compact.wasm
-          cp quantus_runtime.compact.compressed.wasm quantus-runtime-v${runtime_ver}.compact.compressed.wasm
+          wasm_path=$(jq -r '.runtimes.compact.wasm' srtool-output.json)
+          wasm_compressed_path=$(jq -r '.runtimes.compressed.wasm' srtool-output.json)
+          cp "$wasm_path" quantus-runtime-v${runtime_ver}.compact.wasm
+          cp "$wasm_compressed_path" quantus-runtime-v${runtime_ver}.compact.compressed.wasm
           cp srtool-output.json quantus-runtime-srtool-output-v${runtime_ver}.json
 
       - name: Upload runtime artifacts
