@@ -1,0 +1,344 @@
+name: Create Runtime Upgrade Release
+
+env:
+  CARGO_TERM_COLOR: always
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Type of version bump (major, minor, patch) or specify custom version. For 0.x.y releases, major will bump 0.x -> 0.(x+1)'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+          - custom
+      custom_version:
+        description: 'Custom version string (e.g., v1.2.3 or v0.2.1-beta.1). Only used if version_type is "custom". MUST start with "v" (e.g. v1.2.3)'
+        required: false
+      is_prerelease:
+        description: 'Is this a pre-release? (e.g., alpha, beta, rc)'
+        required: true
+        type: boolean
+        default: false
+      prerelease_identifier:
+        description: 'Pre-release identifier (e.g., alpha, beta, rc). Only used if is_prerelease is true.'
+        required: false
+        default: 'rc'
+      draft_release:
+        description: 'Create the release as a draft?'
+        required: true
+        type: boolean
+        default: true
+      fast_test_create_release_job:
+        description: 'If true, skips actual build and uses dummy artifacts to test release creation steps.'
+        required: false
+        type: boolean
+        default: false
+      rust_version:
+        description: 'Rust version to use for building (e.g., 1.85.0)'
+        required: false
+        default: '1.85.0'
+
+jobs:
+  calculate_next_version:
+    runs-on: ubuntu-latest
+    outputs:
+      new_version: ${{ steps.versioner.outputs.new_version }}
+      commit_sha_short: ${{ steps.vars.outputs.commit_sha_short }}
+      branch_name: ${{ steps.vars.outputs.branch_name }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Get current branch and commit SHA
+        id: vars
+        run: |
+          echo "commit_sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          echo "branch_name=$(git rev-parse --abbrev-ref HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Get latest tag
+        id: latest_tag
+        run: |
+          # Get all tags matching the pattern and sort them by version
+          latest_semver_tag=$(git tag -l "v[0-9]*.[0-9]*.[0-9]*-ru" | sort -V | tail -n 1)
+          
+          # If no tags found, use default
+          if [ -z "$latest_semver_tag" ]; then
+            latest_semver_tag="v0.0.0-ru"
+          fi
+          
+          echo "latest_tag_found=$latest_semver_tag" >> $GITHUB_OUTPUT
+          echo "Latest semantic version tag found: $latest_semver_tag"
+
+      - name: Calculate new version
+        id: versioner
+        env:
+          LATEST_TAG: ${{ steps.latest_tag.outputs.latest_tag_found }}
+          VERSION_TYPE: ${{ github.event.inputs.version_type }}
+          CUSTOM_VERSION: ${{ github.event.inputs.custom_version }}
+          IS_PRERELEASE: ${{ github.event.inputs.is_prerelease }}
+          PRERELEASE_ID: ${{ github.event.inputs.prerelease_identifier }}
+        run: |
+          # Remove 'v' prefix and '-ru' suffix for processing
+          current_version=${LATEST_TAG#v}
+          current_version=${current_version%-ru}
+
+          if [[ "$VERSION_TYPE" == "custom" ]]; then
+            if [[ -z "$CUSTOM_VERSION" ]]; then
+              echo "Error: Custom version is selected but no custom_version string provided."
+              exit 1
+            fi
+            if [[ ! "$CUSTOM_VERSION" =~ ^v ]]; then
+              echo "Error: Custom version string MUST start with 'v' (e.g., v1.2.3)."
+              exit 1
+            fi
+            new_version="${CUSTOM_VERSION}-ru"
+          else
+            # Split version and pre-release part
+            IFS='-' read -r version_core prerelease_part <<< "$current_version"
+            IFS='.' read -r major minor patch <<< "$version_core"
+
+            # Increment based on type
+            if [[ "$VERSION_TYPE" == "major" ]]; then
+              if [[ "$major" == "0" ]]; then # Handle 0.x.y -> 0.(x+1).0
+                major=$major
+                minor=$((minor + 1))
+                patch=0
+              else
+                major=$((major + 1))
+                minor=0
+                patch=0
+              fi
+            elif [[ "$VERSION_TYPE" == "minor" ]]; then
+              minor=$((minor + 1))
+              patch=0
+            elif [[ "$VERSION_TYPE" == "patch" ]]; then
+              patch=$((patch + 1))
+            else
+              echo "Error: Invalid version_type: $VERSION_TYPE"
+              exit 1
+            fi
+            new_version_core="v$major.$minor.$patch"
+
+            if [[ "$IS_PRERELEASE" == "true" ]]; then
+              prerelease_num=1
+              # If current was a prerelease of the same core and same ID, increment number
+              if [[ "$prerelease_part" =~ ^$PRERELEASE_ID\\.([0-9]+)$ ]]; then
+                prerelease_num=1 # Simplified: always start at .1 for new core version
+              elif [[ "$prerelease_part" =~ ^$PRERELEASE_ID$ ]]; then
+                 prerelease_num=1 # also start at .1 if it was just "alpha"
+              fi
+              new_version="$new_version_core-$PRERELEASE_ID.$prerelease_num-ru"
+            else
+              new_version="$new_version_core-ru"
+            fi
+          fi
+          echo "New version: $new_version"
+          echo "new_version=$new_version" >> $GITHUB_OUTPUT
+
+  build-runtime:
+    timeout-minutes: 180
+    needs: calculate_next_version
+    runs-on: ubuntu-22.04
+    env:
+      CARGO_TERM_COLOR: always
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: cache target dir
+        uses: actions/cache@v4
+        with:
+          path: "$GITHUB_WORKSPACE/runtime/target"
+          key: srtool-target-${{ github.sha }}
+          restore-keys: |
+            srtool-target-
+      - name: build runtime
+        id: srtool-build
+        shell: bash
+        run: |
+          set -eo pipefail
+          
+          echo "::group::Executing srtool command"
+          
+          JSON_OUTPUT=$(docker run --rm \
+            -e RUSTC_BOOTSTRAP=1 \
+            -e RUSTC_VERSION="${{ github.event.inputs.rust_version }}" \
+            -e PACKAGE="quantus-runtime" \
+            -e RUNTIME_DIR="runtime" \
+            -e "BUILD_OPTS=--features on-chain-release-build" \
+            -e PROFILE="release" \
+            -v "$(pwd):/build" \
+            -v "/tmp/cargo:/cargo-home" \
+            paritytech/srtool:1.84.1 \
+            build --app --json -cM \
+            | tee /dev/stderr | tail -n 1)
+
+          echo "::endgroup::"
+          
+          # Check if JSON is valid
+          if ! echo "$JSON_OUTPUT" | jq .; then
+            echo "::error::Failed to parse srtool JSON output. Last line was: $JSON_OUTPUT"
+            exit 1
+          fi
+
+          echo "::group::Srtool JSON Output"
+          echo "$JSON_OUTPUT" | jq .
+          echo "::endgroup::"
+
+          # Extract paths from JSON
+          WASM_PATH=$(echo "$JSON_OUTPUT" | jq -r '.runtimes.compact.wasm')
+          WASM_COMPRESSED_PATH=$(echo "$JSON_OUTPUT" | jq -r '.runtimes.compressed.wasm')
+          
+          if [ -z "$WASM_PATH" ] || [ "$WASM_PATH" == "null" ]; then
+            echo "::error::Could not extract wasm path from srtool output."
+            exit 1
+          fi
+
+          # Set outputs for subsequent steps
+          echo "json=$JSON_OUTPUT" >> $GITHUB_OUTPUT
+          echo "wasm=$WASM_PATH" >> $GITHUB_OUTPUT
+          echo "wasm_compressed=$WASM_COMPRESSED_PATH" >> $GITHUB_OUTPUT
+
+      - name: Fix permissions for cache
+        run: sudo chown -R runner:docker "$GITHUB_WORKSPACE/runtime/target"
+
+      - name: persist srtool digest
+        run: >
+          echo '${{ steps.srtool-build.outputs.json }}' |
+          jq > srtool-output.json
+      - if: always()
+        name: upload srtool json
+        uses: actions/upload-artifact@v4
+        with:
+          name: srtool-json
+          path: srtool-output.json
+      - if: always()
+        name: upload runtime
+        uses: actions/upload-artifact@v4
+        with:
+          name: runtime
+          path: |
+            ${{ steps.srtool-build.outputs.wasm }}
+            ${{ steps.srtool-build.outputs.wasm_compressed }}
+
+  create-draft-release:
+    runs-on: ubuntu-22.04
+    needs: [calculate_next_version, build-runtime]
+    permissions:
+      contents: write
+    outputs:
+      release_url: ${{ steps.create-release.outputs.html_url }}
+      asset_upload_url: ${{ steps.create-release.outputs.upload_url }}
+      new_version: ${{ steps.create-release.outputs.new_version }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: srtool-json
+      - name: Create Git Tag
+        env:
+          NEW_VERSION: ${{ needs.calculate_next_version.outputs.new_version }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor }}@users.noreply.github.com"
+          git tag -a "$NEW_VERSION" -m "Runtime Upgrade Release $NEW_VERSION"
+          git push origin "$NEW_VERSION"
+      - name: get runtime version and paths
+        id: get-runtime-info
+        run: |
+          runtime_ver=$(jq -r '.runtimes.compact.subwasm.core_version.specVersion' srtool-output.json)
+          echo "runtime_ver=$runtime_ver" >> $GITHUB_OUTPUT
+
+      - name: create draft release
+        id: create-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NEW_VERSION: ${{ needs.calculate_next_version.outputs.new_version }}
+          IS_PRERELEASE: ${{ github.event.inputs.is_prerelease }}
+          DRAFT_RELEASE: ${{ github.event.inputs.draft_release }}
+          BRANCH_NAME: ${{ needs.calculate_next_version.outputs.branch_name }}
+          COMMIT_SHA_SHORT: ${{ needs.calculate_next_version.outputs.commit_sha_short }}
+          RUNTIME_SPEC: ${{ steps.get-runtime-info.outputs.runtime_ver }}
+        run: |
+          # Prepare release notes
+          release_notes=$(printf "Runtime upgrade release for version %s\\n Runtime spec version: %s \\nBuilt from branch: \`%s\`\\nCommit: \`%s\`" "$NEW_VERSION" "$RUNTIME_SPEC" "$BRANCH_NAME" "$COMMIT_SHA_SHORT")
+
+          # Create the release. This command does not support the --json flag.
+          gh release create "$NEW_VERSION" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "$NEW_VERSION" \
+            --notes "$release_notes" \
+            --target "$GITHUB_SHA" \
+            $( [[ "$DRAFT_RELEASE" == "true" ]] && echo "--draft" ) \
+            $( [[ "$IS_PRERELEASE" == "true" ]] && echo "--prerelease" )
+
+          # Now, fetch the data for the newly created release. The 'view' command supports --json.
+          release_data=$(gh release view "$NEW_VERSION" \
+            --repo "$GITHUB_REPOSITORY" \
+            --json uploadUrl,url)
+          
+          # Set the outputs for the next job using the fetched data
+          echo "upload_url=$(echo "$release_data" | jq -r .uploadUrl)" >> $GITHUB_OUTPUT
+          echo "html_url=$(echo "$release_data" | jq -r .url)" >> $GITHUB_OUTPUT
+          echo "new_version=${{ env.NEW_VERSION }}" >> $GITHUB_OUTPUT
+
+  publish-runtime:
+    runs-on: ubuntu-22.04
+    needs: create-draft-release
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: runtime
+      - uses: actions/download-artifact@v4
+        with:
+          name: srtool-json
+      - name: get runtime version and paths
+        id: get-runtime-info
+        run: |
+          runtime_ver=$(jq -r '.runtimes.compact.subwasm.core_version.specVersion' srtool-output.json)
+          compact_wasm_path_full=$(jq -r '.runtimes.compact.wasm' srtool-output.json)
+          compressed_wasm_path_full=$(jq -r '.runtimes.compressed.wasm' srtool-output.json)
+          
+          # Extract just the filename, as download-artifact flattens the structure
+          compact_wasm_filename=$(basename "$compact_wasm_path_full")
+          compressed_wasm_filename=$(basename "$compressed_wasm_path_full")
+
+          echo "runtime_ver=$runtime_ver" >> $GITHUB_OUTPUT
+          echo "compact_wasm_path=$compact_wasm_filename" >> $GITHUB_OUTPUT
+          echo "compressed_wasm_path=$compressed_wasm_filename" >> $GITHUB_OUTPUT
+      - name: upload compact wasm
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload ${{ needs.create-draft-release.outputs.new_version }} \
+            "${{ steps.get-runtime-info.outputs.compact_wasm_path }}#quantus-runtime-v${{ steps.get-runtime-info.outputs.runtime_ver }}.compact.wasm" \
+            --clobber \
+            --repo "$GITHUB_REPOSITORY"
+      - name: upload compressed wasm
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload ${{ needs.create-draft-release.outputs.new_version }} \
+            "${{ steps.get-runtime-info.outputs.compressed_wasm_path }}#quantus-runtime-v${{ steps.get-runtime-info.outputs.runtime_ver }}.compact.compressed.wasm" \
+            --clobber \
+            --repo "$GITHUB_REPOSITORY"
+      - name: upload srtool output json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload ${{ needs.create-draft-release.outputs.new_version }} \
+            "srtool-output.json#quantus-runtime-srtool-output-v${{ steps.get-runtime-info.outputs.runtime_ver }}.json" \
+            --clobber \
+            --repo "$GITHUB_REPOSITORY"
