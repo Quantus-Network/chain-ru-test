@@ -173,25 +173,41 @@ jobs:
       - name: Update files
         env:
           NEW_VERSION_WITH_V: ${{ needs.calculate_next_version.outputs.new_version }}
-          GITHUB_TOKEN: ${{ secrets.ADMIN_PAT }}
         run: |
           set -ex
           new_cargo_version=${NEW_VERSION_WITH_V#v}
           
+          # Always update node version
           echo "Updating node/Cargo.toml to version: $new_cargo_version"
           sed -i -E "s/^version\s*=\s*\"[0-9a-zA-Z.-]+\"/version = \"$new_cargo_version\"/" node/Cargo.toml
           
-          echo "Updating Cargo.lock for quantus-node package..."
-          cargo update -p quantus-node --precise "$new_cargo_version" || echo "cargo update -p quantus-node tried, proceeding."
+          # For runtime upgrade, also update runtime version and spec_version
+          if [[ "${{ github.event.inputs.is_runtime_upgrade }}" == "true" ]]; then
+            echo "Runtime upgrade detected. Updating runtime/Cargo.toml and incrementing spec_version..."
+            sed -i -E "s/^version\s*=\s*\"[0-9a-zA-Z.-]+\"/version = \"$new_cargo_version\"/" runtime/Cargo.toml
+            
+            # Increment spec_version
+            current_spec_version=$(grep -o 'spec_version: [0-9]*' runtime/src/lib.rs | awk '{print $2}')
+            new_spec_version=$((current_spec_version + 1))
+            sed -i -E "s/spec_version: [0-9]*/spec_version: $new_spec_version/" runtime/src/lib.rs
+          fi
           
-          echo "Contents of node/Cargo.toml after update:"
-          cat node/Cargo.toml
+          # Update Cargo.lock
+          cargo update -p quantus-node --precise "$new_cargo_version" || echo "cargo update -p quantus-node tried, proceeding."
+          if [[ "${{ github.event.inputs.is_runtime_upgrade }}" == "true" ]]; then
+            cargo update -p quantus-runtime --precise "$new_cargo_version" || echo "cargo update -p quantus-runtime tried, proceeding."
+          fi
 
+          # Commit changes
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           
           git add node/Cargo.toml Cargo.lock
-          git commit -m $"Bump version to $NEW_VERSION_WITH_V\n\nUpdate Cargo.toml and Cargo.lock for quantus-node.\n[skip ci]"
+          if [[ "${{ github.event.inputs.is_runtime_upgrade }}" == "true" ]]; then
+            git add runtime/Cargo.toml runtime/src/lib.rs
+          fi
+          
+          git commit -m $"Bump version to $NEW_VERSION_WITH_V\n\nUpdate version in Cargo.toml files and Cargo.lock.\n[skip ci]"
           git push
 
   build_and_package:
@@ -459,7 +475,7 @@ jobs:
           echo "--- Directory structure of downloaded-artifacts ---"
           ls -R downloaded-artifacts
           echo "--- Finding asset files ---"
-          find downloaded-artifacts -type f \( -name "*.tar.gz" -o -name "*.zip" -o -name "*.txt" \) -print0 > asset_files.txt
+          find downloaded-artifacts -type f \( -name "*.tar.gz" -o -name "*.zip" -o -name "*.txt" -o -name "*.wasm" -o -name "*.json" \) -print0 > asset_files.txt
           echo "--- Raw content of asset_files.txt (null characters will not be visible) ---"
           cat asset_files.txt 
           echo "--- Processed content of asset_files.txt (one file per line) ---"
