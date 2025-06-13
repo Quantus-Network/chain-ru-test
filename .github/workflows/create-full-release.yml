@@ -71,16 +71,14 @@ jobs:
       - name: Get latest tag
         id: latest_tag
         run: |
-          if [[ "${{ github.event.inputs.is_runtime_upgrade }}" == "true" ]]; then
-            # For runtime upgrade, look for tags with -ru suffix
-            latest_semver_tag=$(git tag -l "v[0-9]*.[0-9]*.[0-9]*-${{ github.event.inputs.runtime_upgrade_suffix }}" | sort -V | tail -n 1)
-            if [ -z "$latest_semver_tag" ]; then
-              latest_semver_tag="v0.0.0-${{ github.event.inputs.runtime_upgrade_suffix }}"
-            fi
-          else
-            # For normal releases, look for standard version tags
-            latest_semver_tag=$(git describe --tags --match "v[0-9]*.[0-9]*.[0-9]*" --abbrev=0 2>/dev/null || echo "v0.0.0")
+          # Get all version tags and sort them by version
+          latest_semver_tag=$(git tag -l "v[0-9]*.[0-9]*.[0-9]*" | sort -V | tail -n 1)
+          
+          # If no tags found, use default
+          if [ -z "$latest_semver_tag" ]; then
+            latest_semver_tag="v0.0.0"
           fi
+          
           echo "latest_tag_found=$latest_semver_tag" >> $GITHUB_OUTPUT
           echo "Latest semantic version tag found: $latest_semver_tag"
 
@@ -97,9 +95,8 @@ jobs:
         run: |
           # Remove 'v' prefix and any suffix for processing
           current_version=${LATEST_TAG#v}
-          if [[ "$IS_RUNTIME_UPGRADE" == "true" ]]; then
-            current_version=${current_version%-$RUNTIME_SUFFIX}
-          fi
+          # Remove any suffix after the version number
+          current_version=$(echo "$current_version" | sed -E 's/-[^-]+$//')
 
           if [[ "$VERSION_TYPE" == "custom" ]]; then
             if [[ -z "$CUSTOM_VERSION" ]]; then
@@ -140,6 +137,7 @@ jobs:
 
             if [[ "$IS_PRERELEASE" == "true" ]]; then
               prerelease_num=1
+              # If current was a prerelease of the same core and same ID, increment number
               if [[ "$prerelease_part" =~ ^$PRERELEASE_ID\\.([0-9]+)$ ]]; then
                 prerelease_num=1 # Simplified: always start at .1 for new core version
               elif [[ "$prerelease_part" =~ ^$PRERELEASE_ID$ ]]; then
@@ -181,7 +179,7 @@ jobs:
           echo "Updating node/Cargo.toml to version: $new_cargo_version"
           sed -i -E "s/^version\s*=\s*\"[0-9a-zA-Z.-]+\"/version = \"$new_cargo_version\"/" node/Cargo.toml
           
-          # For runtime upgrade, also update runtime version and spec_version
+          # For runtime upgrade, also update runtime version and increment spec_version
           if [[ "${{ github.event.inputs.is_runtime_upgrade }}" == "true" ]]; then
             echo "Runtime upgrade detected. Updating runtime/Cargo.toml and incrementing spec_version..."
             sed -i -E "s/^version\s*=\s*\"[0-9a-zA-Z.-]+\"/version = \"$new_cargo_version\"/" runtime/Cargo.toml
