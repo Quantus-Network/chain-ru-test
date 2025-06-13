@@ -39,7 +39,7 @@ on:
         type: boolean
         default: false
       rust_version:
-        description: 'Rust version to use for building (e.g., 1.84.0)'
+        description: 'Rust version to use for building (e.g., 1.85.0)'
         required: false
         default: '1.85.0'
 
@@ -249,6 +249,11 @@ jobs:
           git config user.email "${{ github.actor }}@users.noreply.github.com"
           git tag -a "$NEW_VERSION" -m "Runtime Upgrade Release $NEW_VERSION"
           git push origin "$NEW_VERSION"
+      - name: get runtime version and paths
+        id: get-runtime-info
+        run: |
+          runtime_ver=$(jq -r '.runtimes.compact.subwasm.core_version.specVersion' srtool-output.json)
+          echo "runtime_ver=$runtime_ver" >> $GITHUB_OUTPUT
 
       - name: create draft release
         id: create-release
