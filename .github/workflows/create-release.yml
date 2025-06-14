@@ -588,3 +588,21 @@ jobs:
             $( [[ "$IS_PRERELEASE" == "true" ]] && echo "--prerelease" ) \
             $( [[ "$DRAFT_RELEASE" == "true" ]] && echo "--draft" ) \
             "${asset_args[@]}"
+
+  create-runtime-issue:
+    name: 📝 Create Runtime Upgrade Issue
+    needs: [create-github-release]
+    if: github.event.inputs.is_runtime_upgrade == 'true' && needs.create-github-release.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create issue for runtime upgrade
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NEW_VERSION: ${{ needs.create-github-release.outputs.NEW_VERSION || needs.create-github-release.outputs.new_version }}
+        run: |
+          issue_title="Runtime upgrade released: $NEW_VERSION"
+          issue_body="A new runtime upgrade has been released: [$NEW_VERSION](https://github.com/${{ github.repository }}/releases/tag/$NEW_VERSION)\n\nPlease review and coordinate the upgrade process."
+          gh issue create \
+            --title "$issue_title" \
+            --body "$issue_body" \
+            --repo "$GITHUB_REPOSITORY"
