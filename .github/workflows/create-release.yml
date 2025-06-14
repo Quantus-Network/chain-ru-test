@@ -170,12 +170,16 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Update files
+      - name: Create version bump branch and PR
         env:
           NEW_VERSION_WITH_V: ${{ needs.calculate-next-version.outputs.new_version }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -ex
           new_cargo_version=${NEW_VERSION_WITH_V#v}
+          branch_name="ci/version-bump-${NEW_VERSION_WITH_V}"
+
+          git checkout -b "$branch_name"
           
           # Always update node version
           echo "Updating node/Cargo.toml to version: $new_cargo_version"
@@ -207,8 +211,14 @@ jobs:
             git add runtime/Cargo.toml runtime/src/lib.rs
           fi
           
-          git commit -m $"ci: Automate version bump to $NEW_VERSION_WITH_V"
-          git push
+          git commit -m "ci: Automate version bump to $NEW_VERSION_WITH_V"
+          git push origin "$branch_name"
+
+          gh pr create \
+            --title "ci: Automate version bump to $NEW_VERSION_WITH_V" \
+            --body "Automated version bump for release $NEW_VERSION_WITH_V.\n\nTriggered by workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --base main \
+            --head "$branch_name"
 
   build-and-package:
     name: 🏗️ Build & Package (Linux, macOS, Windows)
@@ -589,20 +599,20 @@ jobs:
             $( [[ "$DRAFT_RELEASE" == "true" ]] && echo "--draft" ) \
             "${asset_args[@]}"
 
-  create-runtime-issue:
-    name: 📝 Create Runtime Upgrade Issue
-    needs: [create-github-release]
-    if: github.event.inputs.is_runtime_upgrade == 'true' && needs.create-github-release.result == 'success'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Create issue for runtime upgrade
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NEW_VERSION: ${{ needs.create-github-release.outputs.NEW_VERSION || needs.create-github-release.outputs.new_version }}
-        run: |
-          issue_title="Runtime upgrade released: $NEW_VERSION"
-          issue_body="A new runtime upgrade has been released: [$NEW_VERSION](https://github.com/${{ github.repository }}/releases/tag/$NEW_VERSION)\n\nPlease review and coordinate the upgrade process."
-          gh issue create \
-            --title "$issue_title" \
-            --body "$issue_body" \
-            --repo "$GITHUB_REPOSITORY"
+  # create-runtime-issue:
+  #   name: 📝 Create Runtime Upgrade Issue
+  #   needs: [create-github-release]
+  #   if: github.event.inputs.is_runtime_upgrade == 'true' && needs.create-github-release.result == 'success'
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Create issue for runtime upgrade
+  #       env:
+  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  #         NEW_VERSION: ${{ needs.create-github-release.outputs.NEW_VERSION || needs.create-github-release.outputs.new_version }}
+  #       run: |
+  #         issue_title="Runtime upgrade released: $NEW_VERSION"
+  #         issue_body="A new runtime upgrade has been released: [$NEW_VERSION](https://github.com/${{ github.repository }}/releases/tag/$NEW_VERSION)\n\nPlease review and coordinate the upgrade process."
+  #         gh issue create \
+  #           --title "$issue_title" \
+  #           --body "$issue_body" \
+  #           --repo "$GITHUB_REPOSITORY"
