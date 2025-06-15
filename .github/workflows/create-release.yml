@@ -218,7 +218,7 @@ jobs:
             --title "ci: Automate version bump to $NEW_VERSION_WITH_V" \
             --body "Automated version bump for release $NEW_VERSION_WITH_V.\n\nTriggered by workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
             --base main \
-            --head "$branch_name"
+            --head "$branch_name" \
             --label "version-bump,automated-pr"
 
   build-and-package:
@@ -534,16 +534,18 @@ jobs:
       - name: Create Git Tag
         env:
           NEW_VERSION: ${{ needs.calculate-next-version.outputs.new_version }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.ADMIN_PAT }}
+          BRANCH_NAME: ${{ needs.calculate-next-version.outputs.branch_name }}
         run: |
           git config user.name "${{ github.actor }}"
           git config user.email "${{ github.actor }}@users.noreply.github.com"
+          # Create tag on the version branch
           git tag -a "$NEW_VERSION" -m "Quantus $NEW_VERSION"
           git push origin "$NEW_VERSION"
 
       - name: Create GitHub Release
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.ADMIN_PAT }}
           NEW_VERSION: ${{ needs.calculate-next-version.outputs.new_version }}
           COMMIT_SHA_SHORT: ${{ needs.calculate-next-version.outputs.commit_sha_short }}
           BRANCH_NAME: ${{ needs.calculate-next-version.outputs.branch_name }}
@@ -553,9 +555,9 @@ jobs:
         run: |
           # Prepare release notes
           if [[ "$IS_RUNTIME_UPGRADE" == "true" ]]; then
-            release_notes=$(printf "Runtime upgrade release for version %s\\nBuilt from branch: \`%s\`\\nCommit: \`%s\`" "$NEW_VERSION" "$BRANCH_NAME" "$COMMIT_SHA_SHORT")
+            release_notes=$(printf "Runtime upgrade release for version %s\\nBuilt from branch: \`%s\`\\nCommit: \`%s\`\\n\\nThis release is created from the version branch. PR to main is available for review." "$NEW_VERSION" "$BRANCH_NAME" "$COMMIT_SHA_SHORT")
           else
-            release_notes=$(printf "Automated release for version %s.\\nBuilt from branch: \`%s\`\\nCommit: \`%s\`" "$NEW_VERSION" "$BRANCH_NAME" "$COMMIT_SHA_SHORT")
+            release_notes=$(printf "Automated release for version %s.\\nBuilt from branch: \`%s\`\\nCommit: \`%s\`\\n\\nThis release is created from the version branch. PR to main is available for review." "$NEW_VERSION" "$BRANCH_NAME" "$COMMIT_SHA_SHORT")
           fi
           
           # Write release notes to a file
@@ -595,7 +597,7 @@ jobs:
             --repo "$GITHUB_REPOSITORY" \
             --title "Quantus $NEW_VERSION" \
             --notes-file release_notes.txt \
-            --target "$GITHUB_SHA" \
+            --target "$BRANCH_NAME" \
             $( [[ "$IS_PRERELEASE" == "true" ]] && echo "--prerelease" ) \
             $( [[ "$DRAFT_RELEASE" == "true" ]] && echo "--draft" ) \
             "${asset_args[@]}"
