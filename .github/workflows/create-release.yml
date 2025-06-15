@@ -177,7 +177,7 @@ jobs:
         run: |
           set -ex
           new_cargo_version=${NEW_VERSION_WITH_V#v}
-          branch_name="ci/version-bump-${NEW_VERSION_WITH_V}"
+          branch_name="release/${NEW_VERSION_WITH_V}"
 
           git checkout -b "$branch_name"
           
@@ -602,20 +602,28 @@ jobs:
             $( [[ "$DRAFT_RELEASE" == "true" ]] && echo "--draft" ) \
             "${asset_args[@]}"
 
-  # create-runtime-issue:
-  #   name: 📝 Create Runtime Upgrade Issue
-  #   needs: [create-github-release]
-  #   if: github.event.inputs.is_runtime_upgrade == 'true' && needs.create-github-release.result == 'success'
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Create issue for runtime upgrade
-  #       env:
-  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  #         NEW_VERSION: ${{ needs.create-github-release.outputs.NEW_VERSION || needs.create-github-release.outputs.new_version }}
-  #       run: |
-  #         issue_title="Runtime upgrade released: $NEW_VERSION"
-  #         issue_body="A new runtime upgrade has been released: [$NEW_VERSION](https://github.com/${{ github.repository }}/releases/tag/$NEW_VERSION)\n\nPlease review and coordinate the upgrade process."
-  #         gh issue create \
-  #           --title "$issue_title" \
-  #           --body "$issue_body" \
-  #           --repo "$GITHUB_REPOSITORY"
+  create-runtime-issue:
+    name: 📝 Create Runtime Upgrade Issue
+    needs: [create-github-release]
+    if: github.event.inputs.is_runtime_upgrade == 'true' && needs.create-github-release.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Create issue for runtime upgrade
+        env:
+          GITHUB_TOKEN: ${{ secrets.ADMIN_PAT }}
+          NEW_VERSION: ${{ needs.calculate-next-version.outputs.new_version }}
+          BRANCH_NAME: ${{ needs.calculate-next-version.outputs.branch_name }}
+        run: |
+          # Get PR URL
+          PR_URL=$(gh pr list --head "$BRANCH_NAME" --json url --jq '.[0].url')
+          
+          issue_title="Runtime upgrade released: $NEW_VERSION"
+          issue_body=$(printf "A new runtime upgrade has been released: [%s](https://github.com/%s/releases/tag/%s)\n\n## Details\n- Release version: \`%s\`\n- Branch: \`%s\`\n- PR for review: %s\n\n## Next Steps\nPlease review and coordinate the upgrade process." "$NEW_VERSION" "${{ github.repository }}" "$NEW_VERSION" "$NEW_VERSION" "$BRANCH_NAME" "$PR_URL")
+          gh issue create \
+            --title "$issue_title" \
+            --body "$issue_body" \
+            --repo "$GITHUB_REPOSITORY" \
+            --label "type:task,runtime-upgrade,automated" \
+            --assignee "${{ github.actor }}"
