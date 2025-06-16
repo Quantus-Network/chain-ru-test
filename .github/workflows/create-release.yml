@@ -630,5 +630,5 @@ jobs:
             --title "$issue_title" \
             --body "$issue_body" \
             --repo "$GITHUB_REPOSITORY" \
-            --label "type:task,runtime-upgrade,automated" \
+            --label "runtime-upgrade,automated" \
             --assignee "${{ github.actor }}"
