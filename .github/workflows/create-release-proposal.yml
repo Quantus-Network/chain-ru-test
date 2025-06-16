@@ -6,14 +6,11 @@ env:
 on:
   workflow_dispatch:
     inputs:
-      source_branch:
-        description: 'Source branch to create PR from'
-        required: true
-        type: string
       target_branch:
-        description: 'Target branch for the PR'
-        required: true
+        description: 'Target branch for the PR (default: main)'
+        required: false
         type: string
+        default: 'main'
       version_type:
         description: 'Type of version bump (major, minor, patch) or specify custom version. For 0.x.y releases, major will bump 0.x -> 0.(x+1)'
         required: true
@@ -53,6 +50,7 @@ jobs:
     outputs:
       new_version: ${{ steps.versioner.outputs.new_version }}
       commit_sha_short: ${{ steps.vars.outputs.commit_sha_short }}
+      source_branch: ${{ steps.vars.outputs.source_branch }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -64,6 +62,7 @@ jobs:
         id: vars
         run: |
           echo "commit_sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+          echo "source_branch=$(git rev-parse --abbrev-ref HEAD)" >> $GITHUB_OUTPUT
 
       - name: Get latest tag
         id: latest_tag
@@ -170,7 +169,7 @@ jobs:
         env:
           NEW_VERSION_WITH_V: ${{ needs.calculate-next-version.outputs.new_version }}
           GITHUB_TOKEN: ${{ secrets.ADMIN_PAT }}
-          SOURCE_BRANCH: ${{ github.event.inputs.source_branch }}
+          SOURCE_BRANCH: ${{ needs.calculate-next-version.outputs.source_branch }}
           TARGET_BRANCH: ${{ github.event.inputs.target_branch }}
         run: |
           set -ex
@@ -219,4 +218,4 @@ jobs:
             --body "$(printf "Automated version bump for release %s.\\n\\nTriggered by workflow run: %s" "$NEW_VERSION_WITH_V" "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}")" \
             --base "$TARGET_BRANCH" \
             --head "$branch_name" \
-            --label "version-bump,automated" 
+            --label "version-bump,automated,release-proposal" 
