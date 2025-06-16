@@ -26,6 +26,8 @@ jobs:
       - uses: ./.github/actions/ubuntu
       - name: pin
         run: rustup override set ${RUSTUP_TOOLCHAIN}
+      - name: Install protoc
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
       - name: Install Rust components
         run: rustup component add rustfmt clippy --toolchain ${RUSTUP_TOOLCHAIN}
       - name: Install taplo

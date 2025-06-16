@@ -216,7 +216,7 @@ jobs:
 
           gh pr create \
             --title "ci: Automate version bump to $NEW_VERSION_WITH_V" \
-            --body "Automated version bump for release $NEW_VERSION_WITH_V.\\n\\nTriggered by workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --body "$(printf "Automated version bump for release %s.\\n\\nTriggered by workflow run: %s" "$NEW_VERSION_WITH_V" "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}")" \
             --base main \
             --head "$branch_name" \
             --label "version-bump,automated"
