@@ -206,6 +206,7 @@ jobs:
   create-github-release:
     name: 🚀 Create GitHub Release
     needs: [create-tag, build-and-release, build-runtime]
+    if: always() && needs.build-and-release.result == 'success' && (needs.build-runtime.result == 'success' || needs.build-runtime.result == 'skipped')
     runs-on: ubuntu-latest
     permissions:
       contents: write
