@@ -1,7 +1,7 @@
 [package]
 name = "quantus-runtime"
 description = "Quantus Runtime - Proof of Vibes"
-version = "0.0.26-33eedcc"
+version = "0.0.29-abcdeddd"
 license = "Apache-2.0"
 authors.workspace = true
 homepage.workspace = true
