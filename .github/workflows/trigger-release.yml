@@ -17,6 +17,7 @@ jobs:
     outputs:
       version: ${{ steps.extract_version.outputs.version }}
       is_runtime_upgrade: ${{ steps.detect_upgrade.outputs.is_runtime_upgrade }}
+      release_branch: ${{ steps.extract_version.outputs.release_branch }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -33,6 +34,7 @@ jobs:
             exit 1
           fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "release_branch=release/$VERSION" >> $GITHUB_OUTPUT
           echo "Extracted version: $VERSION"
 
       - name: Detect runtime upgrade
@@ -259,7 +261,7 @@ jobs:
             --repo "$GITHUB_REPOSITORY" \
             --title "Automate release for $NEW_VERSION" \
             --notes-file release_notes.txt \
-            --target "$NEW_VERSION" \
+            --target ${{ needs.create-tag.outputs.release_branch }} \
             "${asset_args[@]}"
 
   create-runtime-issue:
