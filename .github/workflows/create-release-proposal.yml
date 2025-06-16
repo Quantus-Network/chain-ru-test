@@ -174,7 +174,11 @@ jobs:
         run: |
           set -ex
           new_cargo_version=${NEW_VERSION_WITH_V#v}
-          branch_name="version-bump/${NEW_VERSION_WITH_V}"
+          if [[ "${{ github.event.inputs.is_runtime_upgrade }}" == "true" ]]; then
+            branch_name="chore/runtime_upgrade_${NEW_VERSION_WITH_V}"
+          else
+            branch_name="release/${NEW_VERSION_WITH_V}"
+          fi
 
           # Create new branch from source branch
           git checkout "$SOURCE_BRANCH"
