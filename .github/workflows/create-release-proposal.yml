@@ -174,7 +174,7 @@ jobs:
         run: |
           set -ex
           new_cargo_version=${NEW_VERSION_WITH_V#v}
-          branch_name="version-bump/${NEW_VERSION_WITH_V}"
+          branch_name="release/${NEW_VERSION_WITH_V}"
 
           # Create new branch from source branch
           git checkout "$SOURCE_BRANCH"
@@ -214,7 +214,7 @@ jobs:
           git push origin "$branch_name"
 
           gh pr create \
-            --title "ci: Automate version bump to $NEW_VERSION_WITH_V" \
+            --title "Automate release for $NEW_VERSION_WITH_V" \
             --body "$(printf "Automated version bump for release %s.\\n\\nTriggered by workflow run: %s" "$NEW_VERSION_WITH_V" "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}")" \
             --base "$TARGET_BRANCH" \
             --head "$branch_name" \
