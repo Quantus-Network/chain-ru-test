@@ -281,12 +281,20 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NEW_VERSION: ${{ needs.create-tag.outputs.version }}
+          ISSUE_BODY: |
+            A new runtime upgrade has been released: ${{ needs.create-tag.outputs.version }}
+
+            ## Details
+            - Release version: `${{ needs.create-tag.outputs.version }}`
+            - Branch: `release/${{ needs.create-tag.outputs.version }}`
+
+            ## Next Steps
+            Please review and coordinate the upgrade process.
         run: |
           issue_title="Runtime upgrade released: $NEW_VERSION"
-          issue_body="A new runtime upgrade has been released: [$NEW_VERSION](https://github.com/${{ github.repository }}/releases/tag/$NEW_VERSION)\n\n## Next Steps\nPlease review and coordinate the upgrade process."
           gh issue create \
             --title "$issue_title" \
-            --body "$issue_body" \
+            --body "$ISSUE_BODY" \
             --repo "$GITHUB_REPOSITORY" \
             --label "runtime-upgrade,automated" \
             --assignee "${{ github.actor }}"
