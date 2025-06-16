@@ -26,6 +26,8 @@ jobs:
       - uses: ./.github/actions/ubuntu
       - name: pin
         run: rustup override set ${RUSTUP_TOOLCHAIN}
+      - name: Install taplo
+        run: cargo install taplo-cli
       - name: taplo
         run: SKIP_WASM_BUILD=1 taplo format --check --config taplo.toml
       - name: format

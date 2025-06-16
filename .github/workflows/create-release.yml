@@ -216,7 +216,7 @@ jobs:
 
           gh pr create \
             --title "ci: Automate version bump to $NEW_VERSION_WITH_V" \
-            --body "Automated version bump for release $NEW_VERSION_WITH_V.\n\nTriggered by workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --body "Automated version bump for release $NEW_VERSION_WITH_V.\\n\\nTriggered by workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
             --base main \
             --head "$branch_name" \
             --label "version-bump,automated"
@@ -483,6 +483,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    outputs:
+      new_version: ${{ needs.calculate-next-version.outputs.new_version }}
+      branch_name: ${{ needs.calculate-next-version.outputs.branch_name }}
     steps:
       - uses: actions/checkout@v4
       - if: github.event.inputs.is_runtime_upgrade == 'true'
@@ -622,17 +625,26 @@ jobs:
       - name: Create issue for runtime upgrade
         env:
           GITHUB_TOKEN: ${{ secrets.ADMIN_PAT }}
-          NEW_VERSION: ${{ needs.calculate-next-version.outputs.new_version }}
-          BRANCH_NAME: ${{ needs.calculate-next-version.outputs.branch_name }}
+          NEW_VERSION: ${{ needs.create-github-release.outputs.new_version }}
+          BRANCH_NAME: ${{ needs.create-github-release.outputs.branch_name }}
+          ISSUE_BODY: |
+            A new runtime upgrade has been released: [${{ needs.create-github-release.outputs.new_version }}](https://github.com/${{ github.repository }}/releases/tag/${{ needs.create-github-release.outputs.new_version }})
+
+            ## Details
+            - Release version: `${{ needs.create-github-release.outputs.new_version }}`
+            - Branch: `${{ needs.create-github-release.outputs.branch_name }}`
+            - PR for review: $PR_URL
+
+            ## Next Steps
+            Please review and coordinate the upgrade process.
         run: |
           # Get PR URL
           PR_URL=$(gh pr list --head "$BRANCH_NAME" --json url --jq '.[0].url')
           
           issue_title="Runtime upgrade released: $NEW_VERSION"
-          issue_body=$(printf "A new runtime upgrade has been released: [%s](https://github.com/%s/releases/tag/%s)\n\n## Details\n- Release version: \`%s\`\n- Branch: \`%s\`\n- PR for review: %s\n\n## Next Steps\nPlease review and coordinate the upgrade process." "$NEW_VERSION" "${{ github.repository }}" "$NEW_VERSION" "$NEW_VERSION" "$BRANCH_NAME" "$PR_URL")
           gh issue create \
             --title "$issue_title" \
-            --body "$issue_body" \
+            --body "$ISSUE_BODY" \
             --repo "$GITHUB_REPOSITORY" \
             --label "runtime-upgrade,automated" \
             --assignee "${{ github.actor }}"
