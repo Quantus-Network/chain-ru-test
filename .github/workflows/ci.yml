@@ -26,6 +26,8 @@ jobs:
       - uses: ./.github/actions/ubuntu
       - name: pin
         run: rustup override set ${RUSTUP_TOOLCHAIN}
+      - name: Install Rust components
+        run: rustup component add rustfmt clippy --toolchain ${RUSTUP_TOOLCHAIN}
       - name: Install taplo
         run: cargo install taplo-cli
       - name: taplo
