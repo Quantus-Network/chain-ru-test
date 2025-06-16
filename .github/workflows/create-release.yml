@@ -219,7 +219,7 @@ jobs:
             --body "Automated version bump for release $NEW_VERSION_WITH_V.\n\nTriggered by workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
             --base main \
             --head "$branch_name" \
-            --label "version-bump,automated-pr"
+            --label "version-bump,automated"
 
   build-and-package:
     name: 🏗️ Build & Package (Linux, macOS, Windows)
@@ -539,8 +539,12 @@ jobs:
         run: |
           git config user.name "${{ github.actor }}"
           git config user.email "${{ github.actor }}@users.noreply.github.com"
-          # Create tag on the version branch
-          git tag -a "$NEW_VERSION" -m "Quantus $NEW_VERSION"
+          
+          # Fetch the release branch
+          git fetch origin "$BRANCH_NAME"
+          
+          # Create tag on the release branch commit
+          git tag -a "$NEW_VERSION" -m "Quantus $NEW_VERSION" "origin/$BRANCH_NAME"
           git push origin "$NEW_VERSION"
 
       - name: Create GitHub Release
