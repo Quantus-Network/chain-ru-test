@@ -538,16 +538,16 @@ jobs:
         env:
           NEW_VERSION: ${{ needs.calculate-next-version.outputs.new_version }}
           GITHUB_TOKEN: ${{ secrets.ADMIN_PAT }}
-          BRANCH_NAME: ${{ needs.calculate-next-version.outputs.branch_name }}
+          RELEASE_BRANCH: "release/${{ needs.calculate-next-version.outputs.new_version }}"
         run: |
           git config user.name "${{ github.actor }}"
           git config user.email "${{ github.actor }}@users.noreply.github.com"
           
           # Fetch the release branch
-          git fetch origin "$BRANCH_NAME"
+          git fetch origin "$RELEASE_BRANCH"
           
           # Create tag on the release branch commit
-          git tag -a "$NEW_VERSION" -m "Quantus $NEW_VERSION" "origin/$BRANCH_NAME"
+          git tag -a "$NEW_VERSION" -m "Quantus $NEW_VERSION" "origin/$RELEASE_BRANCH"
           git push origin "$NEW_VERSION"
 
       - name: Create GitHub Release
