@@ -17,7 +17,42 @@ env:
   RUSTUP_TOOLCHAIN: nightly-2024-12-14
 
 jobs:
-  quality-control:
+  quality-checks:
+    name: Quality Checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/disk
+      - uses: ./.github/actions/ubuntu
+      - name: pin
+        run: rustup override set ${RUSTUP_TOOLCHAIN}
+      - name: taplo
+        run: taplo format --check --config taplo.toml
+      - name: format
+        run: cargo fmt --all -- --check
+        timeout-minutes: 5
+      - name: clippy
+        run: SKIP_WASM_BUILD=1 cargo clippy --locked --workspace
+        timeout-minutes: 30
+      - name: doc
+        run: SKIP_WASM_BUILD=1 cargo doc --locked --workspace --no-deps
+        timeout-minutes: 15
+
+  tests:
+    name: Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/disk
+      - uses: ./.github/actions/ubuntu
+      - name: pin
+        run: rustup override set ${RUSTUP_TOOLCHAIN}
+      - name: test
+        run: SKIP_WASM_BUILD=1 cargo test --locked --workspace
+        timeout-minutes: 15
+
+  compile-benchmarks:
+    name: Compile Benchmarks
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -25,44 +60,18 @@ jobs:
           - macos-latest
           - ubuntu-latest
     steps:
-      -
-        uses: actions/checkout@v4
-      -
-        if: contains(matrix.os, 'ubuntu')
-        uses: ./.github/actions/disk
-      -
-        if: contains(matrix.os, 'ubuntu')
-        uses: ./.github/actions/ubuntu
-      -
+      - uses: actions/checkout@v4
+      - name: Setup macOS
         if: contains(matrix.os, 'macos')
         uses: ./.github/actions/macos
-      -
-        name: pin
+      - name: Setup Ubuntu
+        if: contains(matrix.os, 'ubuntu')
+        uses: ./.github/actions/ubuntu
+      - name: pin
         run: rustup override set ${RUSTUP_TOOLCHAIN}
-      -
-        name: taplo
-        run: taplo format --check --config taplo.toml
-      -
-        name: format
-        run: cargo fmt --all -- --check
-        timeout-minutes: 5
-      -
-        name: compile
+      - name: compile
         run: cargo build --locked --workspace
         timeout-minutes: 90
-      -
-        name: compile with benchmarks
+      - name: compile with benchmarks
         run: cargo check --locked --workspace --features runtime-benchmarks
         timeout-minutes: 90
-      -
-        name: clippy
-        run: SKIP_WASM_BUILD=1 cargo clippy --locked --workspace
-        timeout-minutes: 30
-      -
-        name: test
-        run: SKIP_WASM_BUILD=1 cargo test --locked --workspace
-        timeout-minutes: 15
-      -
-        name: doc
-        run: SKIP_WASM_BUILD=1 cargo doc --locked --workspace --no-deps
-        timeout-minutes: 15
