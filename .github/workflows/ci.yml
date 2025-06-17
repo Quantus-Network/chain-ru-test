@@ -101,6 +101,8 @@ jobs:
         uses: ./.github/actions/ubuntu
       - name: pin
         run: rustup override set ${RUSTUP_TOOLCHAIN}
+      - name: Install required components
+        run: rustup component add clippy
       - name: Run clippy
         run: SKIP_WASM_BUILD=1 cargo clippy --locked --workspace
       - name: Save cache key
