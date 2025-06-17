@@ -122,6 +122,7 @@ jobs:
             ~/.cargo/registry
             target
           key: ${{ runner.os }}-cargo-prime-${{ hashFiles('**/Cargo.lock') }}
+      - uses: ./.github/actions/ubuntu
       - name: Install nextest
         run: cargo install cargo-nextest --locked
       - name: pin
