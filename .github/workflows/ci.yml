@@ -84,7 +84,7 @@ jobs:
         run: |
           rustup target add wasm32-unknown-unknown
           rustup component add rust-src
-      - name: Build and Test
+      - name: Build project
         run: |
           cargo build --locked --workspace
           SKIP_WASM_BUILD=1 cargo build --locked --workspace
@@ -113,6 +113,8 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-prime-${{ hashFiles('**/Cargo.lock') }}
       - uses: ./.github/actions/ubuntu
+      - name: Install protobuf
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
       - name: pin
         run: rustup override set ${RUSTUP_TOOLCHAIN}
       - name: Build project
@@ -134,6 +136,8 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-prime-${{ hashFiles('**/Cargo.lock') }}
       - uses: ./.github/actions/ubuntu
+      - name: Install protobuf
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
       - name: Install nextest
         run: cargo install cargo-nextest --locked
       - name: pin
