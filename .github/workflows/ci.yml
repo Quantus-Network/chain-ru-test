@@ -34,6 +34,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-prime-
       - uses: ./.github/actions/ubuntu
+      - name: Install protobuf
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
       - name: pin
         run: rustup override set ${RUSTUP_TOOLCHAIN}
       - name: Install tools
@@ -71,6 +73,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-build-
       - uses: ./.github/actions/macos
+      - name: Install protobuf
+        run: brew install protobuf
       - name: pin
         run: rustup override set ${RUSTUP_TOOLCHAIN}
       - name: Build and Test
