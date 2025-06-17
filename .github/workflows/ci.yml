@@ -126,10 +126,8 @@ jobs:
         run: |
           rustup target add wasm32-unknown-unknown
           rustup component add rust-src
-      - name: Install nextest
-        run: cargo install cargo-nextest --locked
       - name: Run tests
-        run: SKIP_WASM_BUILD=1 cargo nextest run --locked --workspace
+        run: SKIP_WASM_BUILD=1 cargo test --locked --workspace
 
   build-ubuntu:
     name: 🏗️ Build (Ubuntu)
@@ -163,7 +161,6 @@ jobs:
   build-macos:
     name: 🍏 Build (macOS)
     runs-on: macos-latest
-    needs: fast-checks
     steps:
       - uses: actions/checkout@v4
       - name: Cache cargo dependencies
