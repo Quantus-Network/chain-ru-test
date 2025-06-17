@@ -267,7 +267,7 @@ jobs:
   create-runtime-issue:
     name: 📝 Create Runtime Upgrade Issue
     if: needs.create-tag.outputs.is_runtime_upgrade == 'true'
-    needs: create-github-release
+    needs: [create-tag, create-github-release]
     runs-on: ubuntu-latest
     permissions:
       issues: write
