@@ -17,9 +17,27 @@ env:
   RUSTUP_TOOLCHAIN: nightly-2024-12-14
 
 jobs:
-  quality-checks:
-    name: ✨ Quality Checks & Cache Primer
+  fast-checks:
+    name: 🏁 Fast Checks (Format)
     runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/ubuntu
+      - name: pin
+        run: rustup override set ${RUSTUP_TOOLCHAIN}
+      - name: Install required components
+        run: rustup component add rustfmt
+      - name: Install taplo
+        run: cargo install taplo-cli --locked
+      - name: Run format checks
+        run: |
+          taplo format --check --config taplo.toml
+          cargo fmt --all -- --check
+
+  clippy:
+    name: 🤖 Clippy (Ubuntu)
+    runs-on: ubuntu-latest
+    needs: fast-checks
     steps:
       - uses: actions/checkout@v4
       - name: Cache cargo dependencies
@@ -30,9 +48,9 @@ jobs:
             ~/.cargo/git
             ~/.cargo/registry
             target
-          key: ${{ runner.os }}-cargo-prime-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-shared-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
-            ${{ runner.os }}-cargo-prime-
+            ${{ runner.os }}-cargo-shared-
       - uses: ./.github/actions/ubuntu
       - name: Install protobuf
         run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
@@ -41,27 +59,111 @@ jobs:
       - name: Install required components
         run: |
           rustup target add wasm32-unknown-unknown
-          rustup component add rust-src rustfmt clippy
-      - name: Install tools
-        run: cargo install taplo-cli --locked
-      - name: Warm up cache and run checks
-        run: |
-          taplo format --check --config taplo.toml
-          cargo fmt --all -- --check
-          SKIP_WASM_BUILD=1 cargo clippy --locked --workspace
-          SKIP_WASM_BUILD=1 cargo doc --locked --workspace --no-deps
+          rustup component add rust-src clippy
+      - name: Run clippy
+        run: SKIP_WASM_BUILD=1 cargo clippy --locked --workspace
       - name: Save cache key
         if: always()
-        run: echo "${{ runner.os }}-cargo-prime-${{ hashFiles('**/Cargo.lock') }}" > cache-key-prime.txt
+        run: echo "${{ runner.os }}-cargo-shared-${{ hashFiles('**/Cargo.lock') }}" > cache-key-ubuntu.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: cache-key-prime
-          path: cache-key-prime.txt
+          name: cache-key-ubuntu-clippy
+          path: cache-key-ubuntu.txt
+
+  doc:
+    name: 📚 Doc (Ubuntu)
+    runs-on: ubuntu-latest
+    needs: fast-checks
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cache cargo dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/git
+            ~/.cargo/registry
+            target
+          key: ${{ runner.os }}-cargo-shared-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-shared-
+      - uses: ./.github/actions/ubuntu
+      - name: Install protobuf
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+      - name: pin
+        run: rustup override set ${RUSTUP_TOOLCHAIN}
+      - name: Install required components
+        run: |
+          rustup target add wasm32-unknown-unknown
+          rustup component add rust-src
+      - name: Run doc
+        run: SKIP_WASM_BUILD=1 cargo doc --locked --workspace --no-deps
+
+  tests-ubuntu:
+    name: 🧪 Tests (Ubuntu)
+    runs-on: ubuntu-latest
+    needs: fast-checks
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cache cargo dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/git
+            ~/.cargo/registry
+            target
+          key: ${{ runner.os }}-cargo-shared-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-shared-
+      - uses: ./.github/actions/ubuntu
+      - name: Install protobuf
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+      - name: pin
+        run: rustup override set ${RUSTUP_TOOLCHAIN}
+      - name: Install required components
+        run: |
+          rustup target add wasm32-unknown-unknown
+          rustup component add rust-src
+      - name: Install nextest
+        run: cargo install cargo-nextest --locked
+      - name: Run tests
+        run: SKIP_WASM_BUILD=1 cargo nextest run --locked --workspace
+
+  build-ubuntu:
+    name: 🏗️ Build (Ubuntu)
+    runs-on: ubuntu-latest
+    needs: fast-checks
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cache cargo dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/git
+            ~/.cargo/registry
+            target
+          key: ${{ runner.os }}-cargo-shared-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-shared-
+      - uses: ./.github/actions/ubuntu
+      - name: Install protobuf
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+      - name: pin
+        run: rustup override set ${RUSTUP_TOOLCHAIN}
+      - name: Install required components
+        run: |
+          rustup target add wasm32-unknown-unknown
+          rustup component add rust-src
+      - name: Build project
+        run: cargo build --locked --workspace
 
   build-macos:
     name: 🍏 Build (macOS)
     runs-on: macos-latest
+    needs: fast-checks
     steps:
       - uses: actions/checkout@v4
       - name: Cache cargo dependencies
@@ -85,9 +187,7 @@ jobs:
           rustup target add wasm32-unknown-unknown
           rustup component add rust-src
       - name: Build project
-        run: |
-          cargo build --locked --workspace
-          SKIP_WASM_BUILD=1 cargo build --locked --workspace
+        run: cargo build --locked --workspace
       - name: Save cache key
         if: always()
         run: echo "${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}" > cache-key-macos.txt
@@ -97,58 +197,10 @@ jobs:
           name: cache-key-macos
           path: cache-key-macos.txt
 
-  build-ubuntu:
-    name: 🏗️ Build (Ubuntu, on Cache)
-    runs-on: ubuntu-latest
-    needs: quality-checks
-    steps:
-      - uses: actions/checkout@v4
-      - name: Restore primed cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/git
-            ~/.cargo/registry
-            target
-          key: ${{ runner.os }}-cargo-prime-${{ hashFiles('**/Cargo.lock') }}
-      - uses: ./.github/actions/ubuntu
-      - name: Install protobuf
-        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
-      - name: pin
-        run: rustup override set ${RUSTUP_TOOLCHAIN}
-      - name: Build project
-        run: cargo build --locked --workspace
-
-  tests-ubuntu:
-    name: 🧪 Tests (Ubuntu, on Cache)
-    runs-on: ubuntu-latest
-    needs: quality-checks
-    steps:
-      - uses: actions/checkout@v4
-      - name: Restore primed cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/git
-            ~/.cargo/registry
-            target
-          key: ${{ runner.os }}-cargo-prime-${{ hashFiles('**/Cargo.lock') }}
-      - uses: ./.github/actions/ubuntu
-      - name: Install protobuf
-        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
-      - name: Install nextest
-        run: cargo install cargo-nextest --locked
-      - name: pin
-        run: rustup override set ${RUSTUP_TOOLCHAIN}
-      - name: Run tests
-        run: SKIP_WASM_BUILD=1 cargo nextest run --locked --workspace
-
   cleanup-cache:
     name: 🧹 Cleanup Cache
     runs-on: ubuntu-latest
-    needs: [quality-checks, build-macos, build-ubuntu, tests-ubuntu]
+    needs: [clippy, doc, tests-ubuntu, build-ubuntu, build-macos]
     if: always()
     steps:
       - name: Download all cache key artifacts
