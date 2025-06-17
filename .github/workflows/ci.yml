@@ -41,7 +41,7 @@ jobs:
       - name: Install required components
         run: |
           rustup target add wasm32-unknown-unknown
-          rustup component add rust-src
+          rustup component add rust-src rustfmt clippy
       - name: Install tools
         run: cargo install taplo-cli --locked
       - name: Warm up cache and run checks
