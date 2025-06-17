@@ -71,11 +71,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NEW_VERSION: ${{ needs.create-tag.outputs.version }}
           ISSUE_BODY: |
-            A new runtime upgrade has been released: $NEW_VERSION
+            A new runtime upgrade has been released: ${{ needs.create-tag.outputs.version }}
 
             ## Details
-            - Release version: `$NEW_VERSION`
-            - Branch: `release/$NEW_VERSION`
+            - Release version: `${{ needs.create-tag.outputs.version }}`
+            - Branch: `release/${{ needs.create-tag.outputs.version }}`
 
             ## Next Steps
             Please review and coordinate the upgrade process.
