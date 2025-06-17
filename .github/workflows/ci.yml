@@ -69,8 +69,6 @@ jobs:
         run: cargo build --locked --workspace --features runtime-benchmarks
       - name: test
         run: SKIP_WASM_BUILD=1 cargo test --locked --workspace
-      - name: doc
-        run: SKIP_WASM_BUILD=1 cargo doc --locked --workspace --no-deps
       - name: Save cache key
         if: always()
         run: echo "${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}" > cache-key-${{ matrix.os }}.txt
@@ -107,10 +105,10 @@ jobs:
         run: |
           rustup target add wasm32-unknown-unknown
           rustup component add rust-src clippy
-      - name: Run analysis
-        run: |
-          SKIP_WASM_BUILD=1 cargo clippy --locked --workspace
-          SKIP_WASM_BUILD=1 cargo doc --locked --workspace --no-deps
+      - name: Run clippy
+        run: SKIP_WASM_BUILD=1 cargo clippy --locked --workspace
+      - name: Run doc
+        run: SKIP_WASM_BUILD=1 cargo doc --locked --workspace --no-deps
       - name: Save cache key
         if: always()
         run: echo "${{ runner.os }}-cargo-analysis-${{ hashFiles('**/Cargo.lock') }}" > cache-key-analysis.txt
