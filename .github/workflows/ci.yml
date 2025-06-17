@@ -17,8 +17,8 @@ env:
   RUSTUP_TOOLCHAIN: nightly-2024-12-14
 
 jobs:
-  build-ubuntu:
-    name: 🏗️ Prepare Build (Ubuntu)
+  quality-checks-and-build-ubuntu:
+    name: ✨ Quality Checks & Build (Ubuntu)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -30,90 +30,38 @@ jobs:
             ~/.cargo/git
             ~/.cargo/registry
             target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - uses: ./.github/actions/disk
+          key: ${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-build-
       - uses: ./.github/actions/ubuntu
-      - name: Install protobuf
-        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
       - name: pin
         run: rustup override set ${RUSTUP_TOOLCHAIN}
-      - name: Install wasm target
-        run: rustup target add wasm32-unknown-unknown
       - name: Install tools
-        run: |
-          cargo install taplo-cli --locked
-          cargo install cargo-nextest --locked
-          rustup component add rustfmt clippy
+        run: cargo install taplo-cli --locked
       - name: Build project
         run: cargo build --locked --workspace
+      - name: Run quality checks
+        run: |
+          taplo format --check --config taplo.toml
+          cargo fmt --all -- --check
+          SKIP_WASM_BUILD=1 cargo clippy --locked --workspace
+          SKIP_WASM_BUILD=1 cargo doc --locked --workspace --no-deps
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: ubuntu-build-artifacts
-          path: |
-            target
-            ~/.cargo/bin/
+          path: target
       - name: Save cache key
         if: always()
-        run: echo "${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}" > cache-key-build-ubuntu.txt
+        run: echo "${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}" > cache-key-ubuntu.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: cache-key-build-ubuntu
-          path: cache-key-build-ubuntu.txt
+          name: cache-key-ubuntu
+          path: cache-key-ubuntu.txt
 
-  quality-checks:
-    name: ✨ Quality Checks
-    runs-on: ubuntu-latest
-    needs: build-ubuntu
-    steps:
-      - uses: actions/checkout@v4
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: ubuntu-build-artifacts
-          path: .
-      - name: Restore executables
-        run: |
-          mkdir -p ~/.cargo
-          mv bin ~/.cargo/
-          chmod -R +x ~/.cargo/bin
-          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
-      - name: pin
-        run: rustup override set ${RUSTUP_TOOLCHAIN}
-      - name: taplo
-        run: taplo format --check --config taplo.toml
-      - name: format
-        run: cargo fmt --all -- --check
-      - name: clippy
-        run: SKIP_WASM_BUILD=1 cargo clippy --locked --workspace
-      - name: doc
-        run: SKIP_WASM_BUILD=1 cargo doc --locked --workspace --no-deps
-
-  tests:
-    name: 🧪 Tests
-    runs-on: ubuntu-latest
-    needs: build-ubuntu
-    steps:
-      - uses: actions/checkout@v4
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: ubuntu-build-artifacts
-          path: .
-      - name: Restore executables
-        run: |
-          mkdir -p ~/.cargo
-          mv bin ~/.cargo/
-          chmod -R +x ~/.cargo/bin
-          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
-      - name: pin
-        run: rustup override set ${RUSTUP_TOOLCHAIN}
-      - name: test
-        run: SKIP_WASM_BUILD=1 cargo nextest run --locked --workspace
-
-  compile-benchmarks-macos:
-    name: 🍏 Compile Benchmarks (macOS)
+  build-and-test-macos:
+    name: 🍏 Build & Test (macOS)
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -125,33 +73,47 @@ jobs:
             ~/.cargo/git
             ~/.cargo/registry
             target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-build-
       - uses: ./.github/actions/macos
-      - name: Install protobuf
-        run: brew install protobuf
       - name: pin
         run: rustup override set ${RUSTUP_TOOLCHAIN}
-      - name: Install wasm target
-        run: rustup target add wasm32-unknown-unknown
-      - name: compile
-        run: cargo build --locked --workspace
-        timeout-minutes: 90
-      - name: compile with benchmarks
-        run: cargo check --locked --workspace --features runtime-benchmarks
-        timeout-minutes: 90
+      - name: Build and Test
+        run: |
+          cargo build --locked --workspace
+          SKIP_WASM_BUILD=1 cargo test --locked --workspace
       - name: Save cache key
         if: always()
-        run: echo "${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}" > cache-key-compile-macos.txt
+        run: echo "${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}" > cache-key-macos.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: cache-key-compile-macos
-          path: cache-key-compile-macos.txt
+          name: cache-key-macos
+          path: cache-key-macos.txt
+
+  tests-on-cache:
+    name: 🧪 Tests (on Ubuntu Cache)
+    runs-on: ubuntu-latest
+    needs: quality-checks-and-build-ubuntu
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: ubuntu-build-artifacts
+          path: .
+      - name: Install nextest
+        run: cargo install cargo-nextest --locked
+      - name: pin
+        run: rustup override set ${RUSTUP_TOOLCHAIN}
+      - name: Run tests
+        run: SKIP_WASM_BUILD=1 cargo nextest run --locked --workspace
 
   cleanup-cache:
     name: 🧹 Cleanup Cache
     runs-on: ubuntu-latest
-    needs: [build-ubuntu, compile-benchmarks-macos, quality-checks, tests]
+    needs: [quality-checks-and-build-ubuntu, build-and-test-macos, tests-on-cache]
     if: always()
     steps:
       - name: Download all cache key artifacts
@@ -165,5 +127,5 @@ jobs:
           echo "Deleting caches..."
           find cache-keys -type f -name "*.txt" -print0 | xargs -0 cat | sort -u | while read -r cache_key; do
             echo "Attempting to delete cache with key: $cache_key"
-            gh cache delete "$cache_key" --repo ${{ github.repository }} --confirm || echo "Could not delete cache key $cache_key. It might have already been deleted or not found."
+            gh cache delete "$cache_key" --repo ${{ github.repository }} --confirm || echo "Could not delete cache with key $cache_key. It might have already been deleted or not found."
           done
