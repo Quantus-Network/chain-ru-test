@@ -17,8 +17,8 @@ env:
   RUSTUP_TOOLCHAIN: nightly-2024-12-14
 
 jobs:
-  quality-checks-and-build-ubuntu:
-    name: ✨ Quality Checks & Build (Ubuntu)
+  quality-checks:
+    name: ✨ Quality Checks & Cache Primer
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -30,35 +30,29 @@ jobs:
             ~/.cargo/git
             ~/.cargo/registry
             target
-          key: ${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-prime-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
-            ${{ runner.os }}-cargo-build-
+            ${{ runner.os }}-cargo-prime-
       - uses: ./.github/actions/ubuntu
       - name: pin
         run: rustup override set ${RUSTUP_TOOLCHAIN}
       - name: Install tools
         run: cargo install taplo-cli --locked
-      - name: Build project
-        run: cargo build --locked --workspace
-      - name: Run quality checks
+      - name: Warm up cache and run checks
         run: |
+          cargo check --locked --workspace
           taplo format --check --config taplo.toml
           cargo fmt --all -- --check
           SKIP_WASM_BUILD=1 cargo clippy --locked --workspace
           SKIP_WASM_BUILD=1 cargo doc --locked --workspace --no-deps
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ubuntu-build-artifacts
-          path: target
       - name: Save cache key
         if: always()
-        run: echo "${{ runner.os }}-cargo-build-${{ hashFiles('**/Cargo.lock') }}" > cache-key-ubuntu.txt
+        run: echo "${{ runner.os }}-cargo-prime-${{ hashFiles('**/Cargo.lock') }}" > cache-key-prime.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: cache-key-ubuntu
-          path: cache-key-ubuntu.txt
+          name: cache-key-prime
+          path: cache-key-prime.txt
 
   build-and-test-macos:
     name: 🍏 Build & Test (macOS)
@@ -92,17 +86,42 @@ jobs:
           name: cache-key-macos
           path: cache-key-macos.txt
 
-  tests-on-cache:
-    name: 🧪 Tests (on Ubuntu Cache)
+  build-ubuntu:
+    name: 🏗️ Build (Ubuntu, on Cache)
     runs-on: ubuntu-latest
-    needs: quality-checks-and-build-ubuntu
+    needs: quality-checks
     steps:
       - uses: actions/checkout@v4
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
+      - name: Restore primed cache
+        uses: actions/cache@v4
         with:
-          name: ubuntu-build-artifacts
-          path: .
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/git
+            ~/.cargo/registry
+            target
+          key: ${{ runner.os }}-cargo-prime-${{ hashFiles('**/Cargo.lock') }}
+      - uses: ./.github/actions/ubuntu
+      - name: pin
+        run: rustup override set ${RUSTUP_TOOLCHAIN}
+      - name: Build project
+        run: cargo build --locked --workspace
+
+  tests-ubuntu:
+    name: 🧪 Tests (Ubuntu, on Cache)
+    runs-on: ubuntu-latest
+    needs: quality-checks
+    steps:
+      - uses: actions/checkout@v4
+      - name: Restore primed cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/git
+            ~/.cargo/registry
+            target
+          key: ${{ runner.os }}-cargo-prime-${{ hashFiles('**/Cargo.lock') }}
       - name: Install nextest
         run: cargo install cargo-nextest --locked
       - name: pin
@@ -113,7 +132,7 @@ jobs:
   cleanup-cache:
     name: 🧹 Cleanup Cache
     runs-on: ubuntu-latest
-    needs: [quality-checks-and-build-ubuntu, build-and-test-macos, tests-on-cache]
+    needs: [quality-checks, build-and-test-macos, build-ubuntu, tests-ubuntu]
     if: always()
     steps:
       - name: Download all cache key artifacts
@@ -127,5 +146,5 @@ jobs:
           echo "Deleting caches..."
           find cache-keys -type f -name "*.txt" -print0 | xargs -0 cat | sort -u | while read -r cache_key; do
             echo "Attempting to delete cache with key: $cache_key"
-            gh cache delete "$cache_key" --repo ${{ github.repository }} --confirm || echo "Could not delete cache with key $cache_key. It might have already been deleted or not found."
+            gh cache delete "$cache_key" --repo ${{ github.repository }} --confirm || echo "Could not delete cache key $cache_key. It might have already been deleted or not found."
           done
