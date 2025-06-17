@@ -259,7 +259,7 @@ jobs:
 
           gh release create "$NEW_VERSION" \
             --repo "$GITHUB_REPOSITORY" \
-            --title "Automate release for $NEW_VERSION" \
+            --title "Quantus $NEW_VERSION" \
             --notes-file release_notes.txt \
             --target ${{ needs.create-tag.outputs.release_branch }} \
             "${asset_args[@]}"
@@ -282,11 +282,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NEW_VERSION: ${{ needs.create-tag.outputs.version }}
           ISSUE_BODY: |
-            A new runtime upgrade has been released: ${{ needs.create-tag.outputs.version }}
+            A new runtime upgrade has been released: $NEW_VERSION
 
             ## Details
-            - Release version: `${{ needs.create-tag.outputs.version }}`
-            - Branch: `release/${{ needs.create-tag.outputs.version }}`
+            - Release version: `$NEW_VERSION`
+            - Branch: `release/$NEW_VERSION`
 
             ## Next Steps
             Please review and coordinate the upgrade process.
