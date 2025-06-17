@@ -125,6 +125,8 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - uses: ./.github/actions/macos
+      - name: Install protobuf
+        run: brew install protobuf
       - name: pin
         run: rustup override set ${RUSTUP_TOOLCHAIN}
       - name: compile
