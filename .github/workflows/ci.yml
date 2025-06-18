@@ -46,17 +46,6 @@ jobs:
           - macos-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Cache cargo dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/git
-            ~/.cargo/registry
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-
       - name: Setup Ubuntu
         if: matrix.os == 'ubuntu-latest'
         uses: ./.github/actions/ubuntu
@@ -69,14 +58,6 @@ jobs:
         run: cargo build --locked --workspace --features runtime-benchmarks
       - name: test
         run: SKIP_WASM_BUILD=1 cargo test --locked --workspace
-      - name: Save cache key
-        if: always()
-        run: echo "${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}" > cache-key-${{ matrix.os }}.txt
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: cache-key-${{ matrix.os }}
-          path: cache-key-${{ matrix.os }}.txt
 
   analysis:
     name: 🤖 Analysis (Clippy & Doc)
@@ -84,17 +65,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Cache cargo dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/git
-            ~/.cargo/registry
-            target
-          key: ${{ runner.os }}-cargo-analysis-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-analysis-
       - name: Setup Ubuntu
         uses: ./.github/actions/ubuntu
       - name: Install protobuf
@@ -109,27 +79,3 @@ jobs:
         run: SKIP_WASM_BUILD=1 cargo clippy --locked --workspace
       - name: Run doc
         run: SKIP_WASM_BUILD=1 cargo doc --locked --workspace --no-deps
-      - name: Save cache key
-        if: always()
-        run: echo "${{ runner.os }}-cargo-analysis-${{ hashFiles('**/Cargo.lock') }}" > cache-key-analysis.txt
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: cache-key-analysis
-          path: cache-key-analysis.txt
-
-  cleanup-cache:
-    name: 🧹 Cleanup Cache
-    runs-on: ubuntu-latest
-    needs: [build-and-test-matrix, analysis]
-    if: always()
-    steps:
-      - name: Delete all caches
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          echo "Deleting all caches..."
-          gh cache list --repo ${{ github.repository }} | grep "Linux-cargo\|macOS-cargo" | awk '{print $1}' | while read -r cache_id; do
-            echo "Deleting cache: $cache_id"
-            gh cache delete "$cache_id" --repo ${{ github.repository }} --confirm
-          done
