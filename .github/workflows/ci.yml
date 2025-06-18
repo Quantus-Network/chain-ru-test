@@ -124,16 +124,12 @@ jobs:
     needs: [build-and-test-matrix, analysis]
     if: always()
     steps:
-      - name: Download all cache key artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: cache-keys
-      - name: Cleanup build cache
+      - name: Delete all caches
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "Deleting caches..."
-          find cache-keys -type f -name "*.txt" -print0 | xargs -0 cat | sort -u | while read -r cache_key; do
-            echo "Attempting to delete cache with key: $cache_key"
-            gh cache delete "$cache_key" --repo ${{ github.repository }} --confirm || echo "Could not delete cache with key $cache_key. It might have already been deleted or not found."
+          echo "Deleting all caches..."
+          gh cache list --repo ${{ github.repository }} | grep "Linux-cargo\|macOS-cargo" | awk '{print $1}' | while read -r cache_id; do
+            echo "Deleting cache: $cache_id"
+            gh cache delete "$cache_id" --repo ${{ github.repository }} --confirm
           done
